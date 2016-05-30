@@ -1,0 +1,18 @@
+## Setup Golang workspace
+# Don't run this script, use source to include it
+
+# Remember where we were
+HERE=`pwd`
+
+# Change to this directory
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+# Set environment var for workspace
+cd go-workspace
+export GOPATH=`pwd`
+
+# Add workspace bin directory to path
+export PATH=$GOPATH/bin:$PATH
+
+# Reset path
+cd $HERE

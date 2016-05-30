@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+## Build binary and run it passing all args to binary
+
+# Change to this directory
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+./build && ./infr "$@"

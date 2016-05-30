@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+## Use `go get` to download build dependencies
+
+# Change to this directory
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+source misc/go-env
+go get infr
