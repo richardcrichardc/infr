@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -31,6 +32,13 @@ type MakeConfig struct {
 	Key      string
 	Port     string
 	Password string
+	Timeout  time.Duration // defaults to 5 seconds, Timeout is only honoured by ssh.Run after connection is established
+}
+
+type RunTimeoutError time.Duration
+
+func (t RunTimeoutError) Error() string {
+	return fmt.Sprintf("easyssh: RunTimeout after %s", time.Duration(t).String())
 }
 
 // returns ssh.Signer from user you running app home path + cutted key path.
@@ -57,6 +65,11 @@ func getKeyFile(keypath string) (ssh.Signer, error) {
 
 // connects to remote server using MakeConfig struct and returns *ssh.Session
 func (ssh_conf *MakeConfig) connect() (*ssh.Session, error) {
+	// set default timeout if it has not been set
+	if ssh_conf.Timeout == 0 {
+		ssh_conf.Timeout = 5 * time.Second
+	}
+
 	// auths holds the detected ssh auth methods
 	auths := []ssh.AuthMethod{}
 
@@ -139,7 +152,10 @@ func (ssh_conf *MakeConfig) Run(command string) (outStr string, err error) {
 	// read from the output channel until the done signal is passed
 	stillGoing := true
 	for stillGoing {
+		timeout := time.NewTimer(ssh_conf.Timeout)
 		select {
+		case <-timeout.C:
+			return outStr, RunTimeoutError(ssh_conf.Timeout)
 		case <-doneChan:
 			stillGoing = false
 		case line := <-outChan:

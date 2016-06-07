@@ -43,27 +43,13 @@ func Install(address, rootPass string) error {
 		return err
 	}
 
-	//const evilCommand = "#!/bin/bash\nsleep 1 && fsfreeze -f / && sleep 5 && dd if=ipxe.usb of=/dev/vda && reboot -f\n"
-
-	if err := remote(ssh, "fsfreeze -f / && sleep 5 && dd if=ipxe.usb of=/dev/vda && reboot -f"); err != nil {
-		return err
+	if err := remote(ssh, "fsfreeze -f / && dd if=ipxe.usb of=/dev/vda && reboot -f"); err != nil {
+		// We expect remote machine to immediately reboot and ssh connection to hang
+		_, isRunTimeout := err.(easyssh.RunTimeoutError)
+		if !isRunTimeout {
+			return err
+		}
 	}
-
-	/*
-
-		if err := remote(ssh, "echo '"+evilCommand+"' > evil-command"); err != nil {
-			return err
-		}
-
-		if err := remote(ssh, "chmod +x evil-command"); err != nil {
-			return err
-		}
-
-		if err := remote(ssh, "nohup ./evil-command &"); err != nil {
-			return err
-		}
-
-	*/
 
 	return nil
 }
