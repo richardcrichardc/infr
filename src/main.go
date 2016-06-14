@@ -21,7 +21,7 @@ func main() {
 
 	cmds = []subcommand{
 		{"init", nil, initWorkDir, "Initialise working directory and configuration file", initWorkDirHelp},
-		{"addkeys", nil, addKeys, "Add ssh keys for managing hosts and containers", ""},
+		{"keys", keyFlags, keys, "List, add and remove ssh keys for managing hosts and containers", keysHelp},
 	}
 
 	if len(os.Args) == 1 {
