@@ -54,7 +54,7 @@ func main() {
 
 		expandWorkDirPath()
 
-		cmd.run(cmdArgs)
+		cmd.run(flagset.Args())
 	}
 
 	/*
