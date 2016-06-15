@@ -17,7 +17,7 @@ type host struct {
 }
 
 func hostsFlags(fs *flag.FlagSet) {
-	fs.BoolVar(&hostsAdd, "a", false, "Add host 'name' to cluster")
+	fs.BoolVar(&hostsAdd, "a", false, "Add host 'name' to cluster,")
 	fs.BoolVar(&hostsRemove, "r", false, "Remove host 'name' from cluster")
 }
 
@@ -27,18 +27,18 @@ func hosts(args []string) {
 	switch len(args) {
 	case 0:
 		if hostsAdd || hostsRemove {
-			errorHelpAndExit("hosts", "That option requires 'name' to be specified.")
+			errorHelpExit("hosts", "That option requires 'name' to be specified.")
 		}
 	case 1:
 		name = args[0]
 		if hostsAdd && hostsRemove {
-			errorHelpAndExit("hosts", "You cannot add and remove a host at the same time.")
+			errorHelpExit("hosts", "You cannot add and remove a host at the same time.")
 		}
 		if !hostsAdd && !hostsRemove {
-			errorHelpAndExit("hosts", "Please specify an option so I know what to do with that host.")
+			errorHelpExit("hosts", "Please specify an option so I know what to do with that host.")
 		}
 	default:
-		errorHelpAndExit("hosts", "Too many arguments.")
+		errorHelpExit("hosts", "Too many arguments.")
 	}
 
 	var hosts []host
@@ -47,8 +47,7 @@ func hosts(args []string) {
 	if hostsAdd {
 		for _, host := range hosts {
 			if host.Name == name {
-				fmt.Printf("Host already exists: %s\n", name)
-				os.Exit(1)
+				errorExit("Host already exists: %s\n", name)
 			}
 		}
 

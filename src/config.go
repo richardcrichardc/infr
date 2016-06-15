@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	ospath "path"
@@ -12,8 +11,7 @@ func cdConfigDir() {
 	cdWorkDir()
 	err := os.Chdir("config")
 	if err != nil {
-		fmt.Printf("Unable to change to config directory: %s\n", err.Error())
-		os.Exit(1)
+		errorExit("Unable to change to config directory: %s\n", err.Error())
 	}
 }
 
@@ -27,15 +25,13 @@ func loadConfig(path string, value interface{}) bool {
 			return false
 		}
 
-		fmt.Printf("Error in loadConfig(%s): %s\n", path, err)
-		os.Exit(1)
+		errorExit("Error in loadConfig(%s): %s\n", path, err)
 	}
 
 	err = json.Unmarshal(jsonBytes, value)
 
 	if err != nil {
-		fmt.Printf("Error in loadConfig(%s): %s\n", path, err)
-		os.Exit(1)
+		errorExit("Error in loadConfig(%s): %s\n", path, err)
 	}
 
 	return true
@@ -46,8 +42,7 @@ func saveConfig(path string, value interface{}) {
 	jsonBytes, err := json.Marshal(value)
 
 	if err != nil {
-		fmt.Printf("Error in saveConfig(%s): %s\n", path, err)
-		os.Exit(1)
+		errorExit("Error in saveConfig(%s): %s\n", path, err)
 	}
 
 	cdConfigDir()
@@ -60,7 +55,6 @@ func saveConfig(path string, value interface{}) {
 	err = ioutil.WriteFile(path, jsonBytes, 0600)
 
 	if err != nil {
-		fmt.Printf("Error in saveConfig(%s): %s\n", path, err)
-		os.Exit(1)
+		errorExit("Error in saveConfig(%s): %s\n", path, err)
 	}
 }

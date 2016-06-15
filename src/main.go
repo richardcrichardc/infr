@@ -49,7 +49,7 @@ func main() {
 		flagset := setupFlags(cmd)
 
 		if err := flagset.Parse(cmdArgs); err != nil {
-			errorHelpAndExit(cmd.name, "Error parsing flags: %s\n\n", err)
+			errorHelpExit(cmd.name, "Error parsing flags: %s\n\n", err)
 		}
 
 		expandWorkDirPath()
@@ -163,9 +163,15 @@ func help(topic string) {
 	os.Exit(1)
 }
 
-func errorHelpAndExit(topic, format string, formatArgs ...interface{}) {
+func errorHelpExit(topic, format string, formatArgs ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, formatArgs...)
 	fmt.Fprint(os.Stderr, "\n\n")
 	help(topic)
+	os.Exit(1)
+}
+
+func errorExit(format string, formatArgs ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, formatArgs...)
+	fmt.Fprintln(os.Stderr)
 	os.Exit(1)
 }
