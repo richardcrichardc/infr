@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	ospath "path"
 )
@@ -12,7 +12,8 @@ func cdConfigDir() {
 	cdWorkDir()
 	err := os.Chdir("config")
 	if err != nil {
-		log.Fatalf("Unable to change to config directory: ", err.Error())
+		fmt.Printf("Unable to change to config directory: %s\n", err.Error())
+		os.Exit(1)
 	}
 }
 
@@ -26,13 +27,15 @@ func loadConfig(path string, value interface{}) bool {
 			return false
 		}
 
-		log.Fatalf("Error in loadConfig(%s): %s", path, err)
+		fmt.Printf("Error in loadConfig(%s): %s\n", path, err)
+		os.Exit(1)
 	}
 
 	err = json.Unmarshal(jsonBytes, value)
 
 	if err != nil {
-		log.Fatalf("Error in loadConfig(%s): %s", path, err)
+		fmt.Printf("Error in loadConfig(%s): %s\n", path, err)
+		os.Exit(1)
 	}
 
 	return true
@@ -43,7 +46,8 @@ func saveConfig(path string, value interface{}) {
 	jsonBytes, err := json.Marshal(value)
 
 	if err != nil {
-		log.Fatalf("Error in saveConfig(%s): %s", path, err)
+		fmt.Printf("Error in saveConfig(%s): %s\n", path, err)
+		os.Exit(1)
 	}
 
 	cdConfigDir()
@@ -56,6 +60,7 @@ func saveConfig(path string, value interface{}) {
 	err = ioutil.WriteFile(path, jsonBytes, 0600)
 
 	if err != nil {
-		log.Fatalf("Error in saveConfig(%s): %s", path, err)
+		fmt.Printf("Error in saveConfig(%s): %s\n", path, err)
+		os.Exit(1)
 	}
 }

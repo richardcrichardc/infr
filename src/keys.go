@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"sort"
 	"strings"
 )
@@ -30,7 +30,7 @@ func keys(args []string) {
 	if keysAddFile != "" {
 		keysAddBytes, err := ioutil.ReadFile(keysAddFile)
 		if err != nil {
-			log.Println("Error reading keyfile: %s", err.Error())
+			fmt.Println("Error reading keyfile: %s", err.Error())
 		}
 		keysAdd = strings.Split(string(keysAddBytes), "\n")
 	}
@@ -38,13 +38,13 @@ func keys(args []string) {
 	if keysRemoveFile != "" {
 		keysRemoveBytes, err := ioutil.ReadFile(keysRemoveFile)
 		if err != nil {
-			log.Println("Error reading keyfile: %s", err.Error())
+			fmt.Println("Error reading keyfile: %s", err.Error())
 		}
 		keysRemove = strings.Split(string(keysRemoveBytes), "\n")
 	}
 
 	var confKeysStr string
-	loadConfig("manager/keys", &confKeysStr)
+	loadConfig("keys", &confKeysStr)
 
 	confKeys := strings.Split(confKeysStr, "\n")
 
@@ -55,8 +55,8 @@ func keys(args []string) {
 
 	allKeysStr := strings.Join(allKeys, "\n")
 
-	log.Printf("manager ssh keys:\n%s", allKeysStr)
-	saveConfig("manager/keys", allKeysStr)
+	saveConfig("keys", allKeysStr)
+	fmt.Println(allKeysStr)
 }
 
 func uniqueStrings(s []string) []string {
