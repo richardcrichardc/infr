@@ -56,50 +56,6 @@ func main() {
 
 		cmd.run(flagset.Args())
 	}
-
-	/*
-		app := cli.NewApp()
-
-		app.Flags = []cli.Flag{
-			cli.StringFlag{
-				Name:  "workdir",
-				Value: "$HOME/.infr",
-				Usage: "Working directory where state is kept",
-			},
-		}
-
-		app.Commands = []cli.Command{
-			{
-				Name:      "init",
-				Usage:     "Initialise working directory",
-				ArgsUsage: "[keyfile]",
-				Action:    createConfig,
-			},
-			{
-				Name:      "addkeys",
-				Usage:     "Add SSH key which can be used to manage containers",
-				ArgsUsage: "[keyfile]",
-				Before:    loadConfig,
-				Action:    addKeys,
-			},
-		}
-
-		app.Run(os.Args)
-	*/
-
-	/*
-	   	currentAddress := "45.63.27.225"
-	   	currentRootPass := ""
-	   	newFQDN := "kaiiwi@tawherotech.nz"
-	   	managerAuthKeys := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKteJko6gySsW+z1zMD2xsSwhl5x12P3SVC5RFLO6COIaVjFeC3ELUEmEZtZM81n6bUMXvmXoXRE3UZWNTmWQlbX4P4tdAVvfgp+HnQ7a/qttpj7PxheLxMNaOUczFcF+GIqNKJ9x4vcXH+v3Lzt16ZB1PZSrzyOWExZ03iU5+hAa9QBgEndSLTePjEBX9zgGawyH/H44/LeRzZ+Rhov1A96ufinT73jtv3lq5MSsovkRLMq7BQB22yVllEkeRTzaqAuVc4W6lwa/NK0LHWteBQy1PZUv8L5zPPTNsgm6HgdNRDi7blamraTJR/2QEqPAWey56eECLDk4z8Rzh7Si/ richardc@kensalrise
-	   ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDcOvlenEefsuKBfV89WTCIktQZC2692k+vD2emTXKSAiU+QKgpBhK3TzKeid+zQWZBlmK1wBSd+JS/kLPtB6KpLwLNDf/RgtTLwxqiG58eBIxQ/TGaWQMNRLVUEivDJnqvudeKvM1YiiRbFpBXj33KLewS6bDo5EdFLIzExh6OxaDP5qli54PxEUjAq6R8OZWPqCFE3F9SLjyQIB5iBqI6bwKrs3q6Di8sUt4RkuUGLAS4ev5KvgMaNdSJRq1ulGmauD1gzHRCYlmrSwbk6MCFB4FyL8tCqoWUs3HkAByWFS9jk324pE/hzMXkkFStSu3H6T8qYblpmpUrb4cCT63P donald@silver`
-
-	   	err := evilbootstrap.Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys)
-	   	if err != nil {
-	   		fmt.Println(err)
-	   	}
-
-	*/
 }
 
 func lookupCmd(name string) *subcommand {

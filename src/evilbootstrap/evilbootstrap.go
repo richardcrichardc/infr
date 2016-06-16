@@ -13,15 +13,6 @@ import (
 )
 
 func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) error {
-	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + currentAddress + "? (type YES to confirm) ")
-	if err != nil {
-		return err
-	}
-
-	if input != "YES\n" {
-		log.Fatal("ABORTING")
-	}
-
 	iPxeScript, err := genPxeScript(managerAuthKeys)
 	if err != nil {
 		return err
@@ -39,12 +30,12 @@ func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) e
 		Port:     "22",
 	}
 
-	log.Printf("Uploading ipxe.sub to %s...", currentAddress)
+	log.Printf("Uploading ipxe.sub to root@%s...", currentAddress)
 	if err := ssh.Scp("ipxe/src/bin/ipxe.usb"); err != nil {
 		return err
 	}
 
-	if err := remote(ssh, "fsfreeze -f / && dd if=ipxe.usb of=/dev/vda && reboot -f"); err != nil {
+	if err := remote(ssh, "fsfreeze -f / && dd if=ipxe.usb of=/dev/vda bs=10M conv=fsync && reboot -f"); err != nil {
 		// We expect remote machine to immediately reboot and ssh connection to hang
 		_, isRunTimeout := err.(easyssh.RunTimeoutError)
 		if !isRunTimeout {
