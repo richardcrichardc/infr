@@ -8,6 +8,14 @@ initrd %s preseed.cfg
 boot
 `
 
+const hostsTemplate = `127.0.0.1       %s.%s %s localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1     localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+`
+
 const preseedTemplate = `
 # Install debian with btrfs root filesystem
 # See https://www.debian.org/releases/jessie/amd64/apbs04.html.en for documentation

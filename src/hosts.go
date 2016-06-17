@@ -89,12 +89,10 @@ func hostsAddDo(name, target string) {
 	hosts = append(hosts, host{name})
 	saveConfig("hosts", hosts)
 
-	newFQDN := name + "." + infrDomain
-
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
-	err = evilbootstrap.Install(target, hostsAddPass, newFQDN, sshKeys)
+	err = evilbootstrap.Install(target, hostsAddPass, name, infrDomain, sshKeys)
 	if err != nil {
 		errorExit("Error during evil bootstrap: %s", err)
 	}

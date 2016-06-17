@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) error {
+func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthKeys string) error {
 	defer msgLF()
 
 	iPxeScript, err := genPxeScript(managerAuthKeys)
@@ -59,7 +59,14 @@ func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) e
 		_, err := ssh.Run("whoami")
 		ready = err == nil
 	}
-	msgLF()
+
+	msg("Setting domainname...")
+	// sudo does a DNS look up of hostname -
+	// change hostname and hosts file at the same time so sudo doesn't fail to resolve the hostname
+	hosts := fmt.Sprintf(hostsTemplate, hostname, domainname, hostname)
+	if err := remote(ssh, "sudo sh -c 'hostnamectl set-hostname %s && echo \"%s\" >/etc/hosts'", hostname, hosts); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -141,7 +148,8 @@ func execToStdOutErr(command string, arg ...string) error {
 	return cmd.Run()
 }
 
-func remote(ssh *easyssh.MakeConfig, command string) error {
+func remote(ssh *easyssh.MakeConfig, command string, args ...interface{}) error {
+	command = fmt.Sprintf(command, args...)
 	msg("Running remote command on %s@%s: %s", ssh.User, ssh.Server, command)
 
 	output, err := ssh.Run(command)
