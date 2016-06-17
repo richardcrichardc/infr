@@ -5,14 +5,16 @@ import (
 	"infr/easyssh"
 	"infr/util"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 )
 
 func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) error {
+	defer msgLF()
+
 	iPxeScript, err := genPxeScript(managerAuthKeys)
 	if err != nil {
 		return err
@@ -30,11 +32,12 @@ func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) e
 		Port:     "22",
 	}
 
-	log.Printf("Uploading ipxe.sub to root@%s...", currentAddress)
+	msg("Uploading ipxe.sub to root@%s...", currentAddress)
 	if err := ssh.Scp("ipxe/src/bin/ipxe.usb"); err != nil {
 		return err
 	}
 
+	msg("Starting reinstall...")
 	if err := remote(ssh, "fsfreeze -f / && dd if=ipxe.usb of=/dev/vda bs=10M conv=fsync && reboot -f"); err != nil {
 		// We expect remote machine to immediately reboot and ssh connection to hang
 		_, isRunTimeout := err.(easyssh.RunTimeoutError)
@@ -43,11 +46,26 @@ func Install(currentAddress, currentRootPass, newFQDN, managerAuthKeys string) e
 		}
 	}
 
+	ssh = &easyssh.MakeConfig{
+		User:   "manager",
+		Server: currentAddress,
+		Key:    "/.ssh/id_rsa",
+		Port:   "22",
+	}
+
+	msg("Waiting for install to complete... (takes approx 10-15m, use virtual console to monitor)")
+	var ready bool
+	for !ready {
+		_, err := ssh.Run("whoami")
+		ready = err == nil
+	}
+	msgLF()
+
 	return nil
 }
 
 func genPxeScript(managerAuthKeys string) (string, error) {
-	log.Printf("Uploaded debian install preseed.cfg")
+	msg("Uploaded debian install preseed.cfg...")
 
 	// Add slash before newline to provide multiline string in preseed cfg
 	escapedManagerAuthKeys := strings.Replace(managerAuthKeys, "\n", "\\\n", -1)
@@ -58,7 +76,7 @@ func genPxeScript(managerAuthKeys string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("preseed.cfg url = %s\n", preeseedUrl)
+	msg("preseed.cfg url = %s", preeseedUrl)
 
 	return fmt.Sprintf(ipxeTemplate, preeseedUrl), nil
 }
@@ -77,7 +95,8 @@ func buildIPxe(script string) error {
 	}(here)
 
 	if util.Exists("ipxe") {
-		log.Printf("Assuming ./ipxe is clone of ipxe repo")
+		msg("Assuming ./ipxe is clone of ipxe repo")
+		msgLF()
 	} else {
 		if err := execToStdOutErr("git", "clone", "http://git.ipxe.org/ipxe.git"); err != nil {
 			return err
@@ -88,7 +107,7 @@ func buildIPxe(script string) error {
 		return err
 	}
 
-	log.Printf("Writing ipxe config files")
+	msg("Writing ipxe config files")
 
 	if !util.Exists("config/local/evil") {
 		if err := os.Mkdir("config/local/evil", 0777); err != nil {
@@ -106,7 +125,8 @@ func buildIPxe(script string) error {
 		return err
 	}
 
-	log.Printf("Building ipxe")
+	msg("Building ipxe")
+	msgLF()
 	if err := execToStdOutErr("make", "bin/ipxe.usb", "CONFIG=evil", "EMBED=embedded-script"); err != nil {
 		return err
 	}
@@ -122,13 +142,51 @@ func execToStdOutErr(command string, arg ...string) error {
 }
 
 func remote(ssh *easyssh.MakeConfig, command string) error {
-	log.Printf("Running remote command on %s@%s: %s", ssh.User, ssh.Server, command)
+	msg("Running remote command on %s@%s: %s", ssh.User, ssh.Server, command)
 
 	output, err := ssh.Run(command)
 	if err != nil {
 		return err
 	}
-	log.Printf("Output: %s", output)
+	msg("Output: %s", output)
+	msgLF()
 
 	return nil
+}
+
+var msgRunning bool
+var msgLFDone chan bool
+
+func msg(format string, args ...interface{}) {
+	text := fmt.Sprintf(format, args...)
+
+	msgLF()
+	msgRunning = true
+
+	fmt.Print(time.Now().Format("15:04:05"), " ", text)
+
+	go func() {
+		for {
+			ticker := time.NewTicker(time.Second)
+			select {
+			case <-ticker.C:
+				fmt.Print("\r", time.Now().Format("15:04:05"), " ", text)
+			case <-msgLFDone:
+				return
+			}
+		}
+	}()
+}
+
+func msgLF() {
+	if msgRunning {
+		msgLFDone <- true
+		fmt.Println()
+		msgRunning = false
+	}
+}
+
+func init() {
+	msgLFDone = make(chan bool)
+
 }
