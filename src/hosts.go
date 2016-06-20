@@ -16,7 +16,8 @@ var hostsRemove bool
 var hostsAddStr, hostsAddPass string
 
 type host struct {
-	Name string
+	Name       string
+	PublicIPv4 string
 }
 
 func hostsFlags(fs *flag.FlagSet) {
@@ -60,7 +61,7 @@ func hosts(args []string) {
 	}
 }
 
-func hostsAddDo(name, target string) {
+func hostsAddDo(name, publicIPv4 string) {
 	var hosts []host
 	var sshKeys string
 
@@ -77,7 +78,7 @@ func hostsAddDo(name, target string) {
 		}
 	}
 
-	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + target + "? (type YES to confirm) ")
+	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + publicIPv4 + "? (type YES to confirm) ")
 	if err != nil {
 		errorExit("%s", err.Error())
 	}
@@ -86,13 +87,13 @@ func hostsAddDo(name, target string) {
 		errorExit("ABORTING")
 	}
 
-	hosts = append(hosts, host{name})
+	hosts = append(hosts, host{Name: name, PublicIPv4: publicIPv4})
 	saveConfig("hosts", hosts)
 
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
-	err = evilbootstrap.Install(target, hostsAddPass, name, infrDomain, sshKeys)
+	err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys)
 	if err != nil {
 		errorExit("Error during evil bootstrap: %s", err)
 	}
