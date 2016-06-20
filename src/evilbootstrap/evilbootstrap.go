@@ -5,6 +5,7 @@ import (
 	"infr/easyssh"
 	"infr/util"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -12,16 +13,16 @@ import (
 	"time"
 )
 
-func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthKeys string) error {
+func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthKeys, lastPreseedURL string) (preseedURL string, err error) {
 	defer msgLF()
 
-	iPxeScript, err := genPxeScript(managerAuthKeys)
+	iPxeScript, preseedURL, err := genPxeScript(managerAuthKeys, lastPreseedURL)
 	if err != nil {
-		return err
+		return preseedURL, err
 	}
 
 	if err := buildIPxe(iPxeScript); err != nil {
-		return err
+		return preseedURL, err
 	}
 
 	ssh := &easyssh.MakeConfig{
@@ -34,7 +35,7 @@ func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthK
 
 	msg("Uploading ipxe.sub to root@%s...", currentAddress)
 	if err := ssh.Scp("ipxe/src/bin/ipxe.usb"); err != nil {
-		return err
+		return preseedURL, err
 	}
 
 	msg("Starting reinstall...")
@@ -42,7 +43,7 @@ func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthK
 		// We expect remote machine to immediately reboot and ssh connection to hang
 		_, isRunTimeout := err.(easyssh.RunTimeoutError)
 		if !isRunTimeout {
-			return err
+			return preseedURL, err
 		}
 	}
 
@@ -65,27 +66,50 @@ func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthK
 	// change hostname and hosts file at the same time so sudo doesn't fail to resolve the hostname
 	hosts := fmt.Sprintf(hostsTemplate, hostname, domainname, hostname)
 	if err := remote(ssh, "sudo sh -c 'hostnamectl set-hostname %s && echo \"%s\" >/etc/hosts'", hostname, hosts); err != nil {
-		return err
+		return preseedURL, err
 	}
 
-	return nil
+	return preseedURL, nil
 }
 
-func genPxeScript(managerAuthKeys string) (string, error) {
-	msg("Uploaded debian install preseed.cfg...")
+func genPxeScript(managerAuthKeys, lastPreseedURL string) (script, preseedURL string, err error) {
+	newGist := true
 
 	// Add slash before newline to provide multiline string in preseed cfg
 	escapedManagerAuthKeys := strings.Replace(managerAuthKeys, "\n", "\\\n", -1)
 
 	preseedCfg := fmt.Sprintf(preseedTemplate, escapedManagerAuthKeys)
 
-	preeseedUrl, err := CreateAnonymousGist(preseedCfg)
-	if err != nil {
-		return "", err
-	}
-	msg("preseed.cfg url = %s", preeseedUrl)
+	if lastPreseedURL != "" {
+		msg("Checking preseed.cfg at %s ...", lastPreseedURL)
 
-	return fmt.Sprintf(ipxeTemplate, preeseedUrl), nil
+		resp, err := http.Get(lastPreseedURL)
+
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == 200 {
+				lastPreseedBytes, _ := ioutil.ReadAll(resp.Body)
+				if string(lastPreseedBytes) == preseedCfg {
+					msg("Reusing Debian installer preseed.cfg Gist at: %s", lastPreseedURL)
+					newGist = false
+					preseedURL = lastPreseedURL
+				}
+			}
+		}
+
+	}
+
+	if newGist {
+		msg("Uploaded Debian installer preseed.cfg as new Gist...")
+
+		preseedURL, err = CreateAnonymousGist(preseedCfg)
+		if err != nil {
+			return "", "", err
+		}
+		msg("Gist URL: %s", preseedURL)
+	}
+
+	return fmt.Sprintf(ipxeTemplate, preseedURL), preseedURL, nil
 }
 
 func buildIPxe(script string) error {

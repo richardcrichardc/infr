@@ -64,9 +64,11 @@ func hosts(args []string) {
 func hostsAddDo(name, publicIPv4 string) {
 	var hosts []host
 	var sshKeys string
+	var lastPreseedURL string
 
 	loadConfig("hosts", &hosts)
 	loadConfig("keys", &sshKeys)
+	loadConfig("lastPreseedURL", &lastPreseedURL)
 
 	if sshKeys == "" {
 		errorHelpExit("keys", "No ssh keys configured. Use `infr keys -a` to add keys before adding hosts.")
@@ -93,7 +95,12 @@ func hostsAddDo(name, publicIPv4 string) {
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
-	err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys)
+	preseedURL, err := evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys, lastPreseedURL)
+
+	if preseedURL != "" {
+		saveConfig("lastPreseedURL", preseedURL)
+	}
+
 	if err != nil {
 		errorExit("Error during evil bootstrap: %s", err)
 	}
