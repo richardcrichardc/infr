@@ -8,7 +8,10 @@ import (
 	"os"
 )
 
-const hostsHelp = `Usage: infr hosts [options] [name]`
+const hostsHelp = `Usage: infr hosts [subcommand] [args]
+
+Manage hosts that containers are run on.
+`
 
 const infrDomain = "infr.tawherotech.nz"
 
@@ -26,42 +29,48 @@ func hostsFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&hostsRemove, "r", false, "Remove host 'name' from cluster")
 }
 
-func hosts(args []string) {
-	var name string
+const hostsListHelp = `[list]
 
-	hostsAdd := hostsAddStr != ""
+List all hosts.
+`
 
-	switch len(args) {
-	case 0:
-		if hostsAdd || hostsRemove {
-			errorHelpExit("hosts", "That option requires 'name' to be specified.")
-		}
-	case 1:
-		name = args[0]
-		if hostsAdd && hostsRemove {
-			errorHelpExit("hosts", "You cannot add and remove a host at the same time.")
-		}
-		if !hostsAdd && !hostsRemove {
-			errorHelpExit("hosts", "Please specify an option so I know what to do with that host.")
-		}
-	default:
-		errorHelpExit("hosts", "Too many arguments.")
+func hostsListCmd(args []string) {
+	if len(args) != 0 {
+		errorHelpExit("hosts", "Too many arguments for 'list'.")
 	}
 
-	if hostsAdd {
-		hostsAddDo(name, hostsAddStr)
-	} else if hostsRemove {
-		hostsRemoveDo(name)
-	} else {
-		var hosts []host
-		loadConfig("hosts", &hosts)
-		for _, host := range hosts {
-			fmt.Println(host.Name)
-		}
+	var hosts []host
+	loadConfig("hosts", &hosts)
+	for _, host := range hosts {
+		fmt.Printf("%-15s %-15s", host.Name, host.PublicIPv4)
 	}
 }
 
-func hostsAddDo(name, publicIPv4 string) {
+const hostsAddHelp = `add [-p root-password] <name> <target IP address>
+
+Add new host to cluster by sshing into root@<target IP address>, reformating the harddrive,
+installing and configuring new operating system and other software.
+
+THIS WILL DESTROY ALL DATA ON THE MACHINE AT <target IP address>. It is designed to be used with a
+brand new VPS containing no data, USE ON AN EXISTING MACHINE AT YOUR OWN RISK.
+
+This command uses the ssh key in $HOMEDIR/.ssh/id_rsa or the password provided by the -p flag to
+authenticate with the target host.
+
+`
+
+func hostsAddFlags(fs *flag.FlagSet) {
+	fs.StringVar(&hostsAddPass, "p", "", "Optional password for sshing into host for initial install.")
+}
+
+func hostsAddCmd(args []string) {
+	if len(args) != 2 {
+		errorHelpExit("hosts", "Wrong number of arguments for 'add'.")
+	}
+
+	name := args[0]
+	publicIPv4 := args[1]
+
 	var hosts []host
 	var sshKeys string
 	var lastPreseedURL string
@@ -102,11 +111,25 @@ func hostsAddDo(name, publicIPv4 string) {
 	}
 
 	if err != nil {
-		errorExit("Error during evil bootstrap: %s", err)
+		errorExit("Error whilst reinstalling target: %s", err)
 	}
+
 }
 
-func hostsRemoveDo(name string) {
+const hostsRemoveHelp = `remove <name>
+
+Remove named host from cluster.
+
+At this stage the host is just removed from list of hosts.
+`
+
+func hostsRemoveCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("hosts", "Wrong number of arguments for 'remove'.")
+	}
+
+	name := args[0]
+
 	var hosts []host
 	loadConfig("hosts", &hosts)
 

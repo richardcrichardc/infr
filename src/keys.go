@@ -1,62 +1,71 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"sort"
 	"strings"
 )
 
-const keysHelp = `Usage: infr keys [-a keyfile] [-d keyfile]
+const keysHelp = `Usage: infr keys [list|add|remove] [keyfile]
 
-Add, delete and list ssh keys used for managing hosts and containers.
+List, add, or remove ssh keys used for managing hosts and containers.
 
-The new set of public keys will be listed after adding and deleting keys specified by the
--a and -d options. Run without options to list current keys.
-
+The contents of [keyfile] should be in the format of .ssh/authorized_keys.
 `
 
 var keysAddFile, keysRemoveFile string
 
-func keyFlags(fs *flag.FlagSet) {
-	fs.StringVar(&keysAddFile, "a", "", "Add keys in specified file")
-	fs.StringVar(&keysRemoveFile, "r", "", "Remove keys in specified file")
+func keysListCmd(args []string) {
+	if len(args) != 0 {
+		errorHelpExit("keys", "Too many arguments for 'list'.")
+	}
+
+	var keys string
+	loadConfig("keys", &keys)
+	fmt.Println(keys)
 }
 
-func keys(args []string) {
-	var keysAdd, keysRemove []string
-
-	if keysAddFile != "" {
-		keysAddBytes, err := ioutil.ReadFile(keysAddFile)
-		if err != nil {
-			fmt.Println("Error reading keyfile: %s", err.Error())
-		}
-		keysAdd = strings.Split(string(keysAddBytes), "\n")
+func keysAddCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("keys", "Wrong number of arguments for 'add'.")
 	}
 
-	if keysRemoveFile != "" {
-		keysRemoveBytes, err := ioutil.ReadFile(keysRemoveFile)
-		if err != nil {
-			fmt.Println("Error reading keyfile: %s", err.Error())
-		}
-		keysRemove = strings.Split(string(keysRemoveBytes), "\n")
+	newKeysBytes, err := ioutil.ReadFile(args[0])
+	if err != nil {
+		fmt.Println("Error reading keyfile: %s", err.Error())
 	}
+	newKeys := strings.Split(string(newKeysBytes), "\n")
 
 	var confKeysStr string
 	loadConfig("keys", &confKeysStr)
-
 	confKeys := strings.Split(confKeysStr, "\n")
 
-	allKeys := stripEmptyStrings(
-		uniqueStrings(
-			removeStrings(
-				append(confKeys, keysAdd...), keysRemove)))
-
+	allKeys := stripEmptyStrings(uniqueStrings(append(confKeys, newKeys...)))
 	allKeysStr := strings.Join(allKeys, "\n")
 
 	saveConfig("keys", allKeysStr)
-	fmt.Println(allKeysStr)
+}
+
+func keysRemoveCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("keys", "Wrong number of arguments for 'remove'.")
+	}
+
+	removeKeysBytes, err := ioutil.ReadFile(args[0])
+	if err != nil {
+		fmt.Println("Error reading keyfile: %s", err.Error())
+	}
+	removeKeys := strings.Split(string(removeKeysBytes), "\n")
+
+	var confKeysStr string
+	loadConfig("keys", &confKeysStr)
+	confKeys := strings.Split(confKeysStr, "\n")
+
+	allKeys := removeStrings(confKeys, removeKeys)
+	allKeysStr := strings.Join(allKeys, "\n")
+
+	saveConfig("keys", allKeysStr)
 }
 
 func uniqueStrings(s []string) []string {
