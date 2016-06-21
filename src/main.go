@@ -28,6 +28,11 @@ func main() {
 	cmds = []command{
 		{"init", "Initialise working directory and configuration file", initWorkDirHelp,
 			[]subCommand{{"", nil, initWorkDir, ""}}},
+		{"config", "Set and view configuration used by other commands", configHelp,
+			[]subCommand{
+				{"view", nil, configViewCmd, ""},
+				{"set", nil, configSetCmd, ""},
+				{"unset", nil, configUnsetCmd, ""}}},
 		{"keys", "List, add and remove ssh keys for managing hosts and containers", keysHelp,
 			[]subCommand{
 				{"list", nil, keysListCmd, ""},
