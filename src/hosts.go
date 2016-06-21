@@ -23,12 +23,6 @@ type host struct {
 	PublicIPv4 string
 }
 
-func hostsFlags(fs *flag.FlagSet) {
-	fs.StringVar(&hostsAddStr, "a", "", "Add host 'name' to cluster, by doing an 'evil bootstrap' of host specified by this option")
-	fs.StringVar(&hostsAddPass, "p", "", "Password for ...")
-	fs.BoolVar(&hostsRemove, "r", false, "Remove host 'name' from cluster")
-}
-
 const hostsListHelp = `[list]
 
 List all hosts.
