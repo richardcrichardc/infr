@@ -73,7 +73,7 @@ func hostsAddCmd(args []string) {
 	loadConfig("hosts", &hosts)
 	loadConfig("keys", &sshKeys)
 	loadConfig("lastPreseedURL", &lastPreseedURL)
-	loadConfig("infr", &infrDomain)
+	loadConfig("infrDomain", &infrDomain)
 
 	if sshKeys == "" {
 		errorHelpExit("hosts", "No ssh keys configured. Use `infr keys add <keyfile>` to add keys before adding hosts.")
