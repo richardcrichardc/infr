@@ -67,21 +67,14 @@ func hostsAddCmd(args []string) {
 	name := args[0]
 	publicIPv4 := args[1]
 
+	sshKeys := needKeys()
+	infrDomain := needInfrDomain()
+
 	var hosts []host
-	var sshKeys, lastPreseedURL, infrDomain string
-
 	loadConfig("hosts", &hosts)
-	loadConfig("keys", &sshKeys)
+
+	var lastPreseedURL string
 	loadConfig("lastPreseedURL", &lastPreseedURL)
-	loadConfig("infrDomain", &infrDomain)
-
-	if sshKeys == "" {
-		errorHelpExit("hosts", "No ssh keys configured. Use `infr keys add <keyfile>` to add keys before adding hosts.")
-	}
-
-	if infrDomain == "" {
-		errorHelpExit("hosts", "No infrDomain configured. Use `infr config set infrDomain <domain>` to configure. Please use a dedicated subdomain, e.g. infr.your-domain.com")
-	}
 
 	for _, host := range hosts {
 		if host.Name == name {

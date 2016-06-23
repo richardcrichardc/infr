@@ -43,6 +43,8 @@ func main() {
 				{"list", nil, hostsListCmd, hostsListHelp},
 				{"add", hostsAddFlags, hostsAddCmd, hostsAddHelp},
 				{"remove", nil, hostsRemoveCmd, hostsRemoveHelp}}},
+		{"dns", "Manage DNS", "",
+			[]subCommand{{"", nil, dnsListCmd, ""}}},
 		{"help", "", "",
 			[]subCommand{{"", nil, helpCmd, ""}}},
 	}

@@ -117,3 +117,14 @@ sloop:
 	}
 	return out
 }
+
+func needKeys() string {
+	var keys string
+	if loadConfig("keys", &keys) {
+		return keys
+	}
+
+	errorExit("keys", "No ssh keys configured. Use `infr keys add <keyfile>` to add keys.")
+
+	return "" // never happens
+}
