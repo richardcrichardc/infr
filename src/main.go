@@ -44,7 +44,9 @@ func main() {
 				{"add", hostsAddFlags, hostsAddCmd, hostsAddHelp},
 				{"remove", nil, hostsRemoveCmd, hostsRemoveHelp}}},
 		{"dns", "Manage DNS", "",
-			[]subCommand{{"", nil, dnsListCmd, ""}}},
+			[]subCommand{
+				{"list", nil, dnsListCmd, "List and check DNS records relating to hosts and containers"},
+				{"fix", nil, dnsFixCmd, "Fix published DNS records relating to hosts and containers"}}},
 		{"help", "", "",
 			[]subCommand{{"", nil, helpCmd, ""}}},
 	}

@@ -17,12 +17,13 @@ const (
 )
 
 type dnsRecord struct {
-	Name   string
-	Type   string
-	Value  string
-	TTL    int
-	Reason string
-	Status recordStatus
+	Name    string
+	Type    string
+	Value   string
+	TTL     int
+	Reason  string
+	Status  recordStatus
+	Rage4Id int
 }
 
 func dnsListCmd(args []string) {
@@ -49,6 +50,12 @@ func dnsListCmd(args []string) {
 		fmt.Printf("\nDNS records are not automatically managed, set 'dns/rage4/..' config settings to enable.\n")
 	}
 
+}
+
+func dnsFixCmd(args []string) {
+	records := dnsRecordsNeeded()
+	records = checkDnsRecords(records)
+	fixDnsRecords(records)
 }
 
 func needInfrDomain() string {
@@ -119,6 +126,8 @@ aRecLoop:
 		if strings.HasSuffix(aRec.Name, infrDomain) {
 			for i, rec := range records {
 				if rec.Name == aRec.Name {
+					records[i].Rage4Id = aRec.Id
+
 					if aRec.Type == rec.Type && aRec.Content == rec.Value && aRec.TTL == rec.TTL {
 						records[i].Status = CORRECT
 					} else {
@@ -133,36 +142,60 @@ aRecLoop:
 
 	for _, extra := range extras {
 		records = append(records, dnsRecord{
-			Name:   extra.Name,
-			Type:   extra.Type,
-			Value:  extra.Content,
-			TTL:    extra.TTL,
-			Reason: "",
-			Status: EXTRA})
+			Name:    extra.Name,
+			Type:    extra.Type,
+			Value:   extra.Content,
+			TTL:     extra.TTL,
+			Reason:  "",
+			Status:  EXTRA,
+			Rage4Id: extra.Id})
 	}
 	return records
 }
 
-func dnsCmd(args []string) {
-	fmt.Println("DNS")
+func fixDnsRecords(records []dnsRecord) {
+	dnsDomain := needGeneralConfig("dns/domain")
 
-	client := rage4.NewClient("accounts@tawherotech.nz", "3bc988f9d09d8f316ac71c22f139f732")
+	client := rage4.NewClient(needGeneralConfig("dns/rage4/account"), needGeneralConfig("dns/rage4/key"))
 
-	domain, err := client.GetDomainByName("tawherotech.nz")
+	domain, err := client.GetDomainByName(dnsDomain)
 	checkErr(err)
-	fmt.Printf("%#v\n", domain)
 
-	records, err := client.GetRecords(domain.Id)
-	checkErr(err)
+	// Make it fail
+	client = &rage4.Client{}
+
 	for _, rec := range records {
-		fmt.Printf("%#v\n", rec)
+
+		rage4Rec := rage4.Record{
+			Id:       rec.Rage4Id,
+			Name:     rec.Name,
+			Content:  rec.Value,
+			Type:     rec.Type,
+			TTL:      rec.TTL,
+			Priority: 1,
+			DomainId: domain.Id,
+			IsActive: true}
+
+		var status rage4.Status
+
+		switch rec.Status {
+		case NEW:
+			println("Create", rec.Name, rec.Rage4Id)
+			status, err = client.CreateRecord(domain.Id, rage4Rec)
+		case INCORRECT:
+			println("Fix", rec.Name, rec.Rage4Id)
+			status, err = client.UpdateRecord(rec.Rage4Id, rage4Rec)
+		case EXTRA:
+			println("Remove", rec.Name, rec.Rage4Id)
+			status, err = client.DeleteRecord(rec.Rage4Id)
+		default:
+			panic("Invalid recordStatus")
+		}
+
+		fmt.Printf("Status: %#v\n", status)
+		checkErr(err)
 	}
 
-	usage, err := client.ShowCurrentUsage(domain.Id)
-	checkErr(err)
-	for _, rec := range usage {
-		fmt.Printf("%#v\n", rec)
-	}
 }
 
 func checkErr(err error) {
