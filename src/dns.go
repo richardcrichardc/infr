@@ -10,7 +10,7 @@ type recordStatus int
 
 const (
 	UNKNOWN = iota
-	NEW
+	MISSING
 	CORRECT
 	INCORRECT
 	EXTRA
@@ -92,8 +92,8 @@ func recordStatusString(v recordStatus) string {
 	switch v {
 	case UNKNOWN:
 		return "???"
-	case NEW:
-		return "NEW"
+	case MISSING:
+		return "MISSING"
 	case CORRECT:
 		return "CORRECT"
 	case INCORRECT:
@@ -118,7 +118,7 @@ func checkDnsRecords(records []dnsRecord) []dnsRecord {
 	var extras []rage4.Record
 
 	for i, _ := range records {
-		records[i].Status = NEW
+		records[i].Status = MISSING
 	}
 
 aRecLoop:
@@ -161,9 +161,6 @@ func fixDnsRecords(records []dnsRecord) {
 	domain, err := client.GetDomainByName(dnsDomain)
 	checkErr(err)
 
-	// Make it fail
-	client = &rage4.Client{}
-
 	for _, rec := range records {
 
 		rage4Rec := rage4.Record{
@@ -179,21 +176,27 @@ func fixDnsRecords(records []dnsRecord) {
 		var status rage4.Status
 
 		switch rec.Status {
-		case NEW:
-			println("Create", rec.Name, rec.Rage4Id)
+		case MISSING:
+			println("Creating DNS record:", rec.Name)
 			status, err = client.CreateRecord(domain.Id, rage4Rec)
+		case CORRECT:
+			// do nothing
+			continue
 		case INCORRECT:
-			println("Fix", rec.Name, rec.Rage4Id)
+			println("Updating DNS record:", rec.Name)
 			status, err = client.UpdateRecord(rec.Rage4Id, rage4Rec)
 		case EXTRA:
-			println("Remove", rec.Name, rec.Rage4Id)
+			println("Removing DNS record:", rec.Name)
 			status, err = client.DeleteRecord(rec.Rage4Id)
 		default:
-			panic("Invalid recordStatus")
+			errorExit("Invalid recordStatus: %s %d", rec.Name, rec.Status)
 		}
 
-		fmt.Printf("Status: %#v\n", status)
 		checkErr(err)
+
+		if status.Status == false {
+			errorExit("Error: %s", status.Error)
+		}
 	}
 
 }
