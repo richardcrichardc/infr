@@ -6,6 +6,7 @@ package easyssh
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -210,4 +211,28 @@ func (ssh_conf *MakeConfig) Scp(sourceFile string) error {
 	}
 
 	return nil
+}
+
+func (ssh_conf *MakeConfig) RunScript(script string, echo, sudo bool) error {
+	session, err := ssh_conf.connect()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	session.Stdin = bytes.NewBufferString(script)
+
+	if echo {
+		session.Stdout = os.Stdout
+		session.Stderr = os.Stderr
+	}
+
+	var cmd string
+	if sudo {
+		cmd = "sudo su"
+	} else {
+		cmd = "bash"
+	}
+
+	return session.Run(cmd)
 }

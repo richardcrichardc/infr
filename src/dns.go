@@ -53,6 +53,10 @@ func dnsListCmd(args []string) {
 }
 
 func dnsFixCmd(args []string) {
+	dnsFix()
+}
+
+func dnsFix() {
 	records := dnsRecordsNeeded()
 	records = checkDnsRecords(records)
 	fixDnsRecords(records)
@@ -64,12 +68,19 @@ func needInfrDomain() string {
 	return dnsPrefix + "." + dnsDomain
 }
 
+func needVnetDomain() string {
+	dnsDomain := needGeneralConfig("dns/domain")
+	vnetPrefix := needGeneralConfig("vnet/prefix")
+	return vnetPrefix + "." + dnsDomain
+}
+
 func dnsIsManaged() bool {
 	return generalConfig("dns/rage4/account") != ""
 }
 
 func dnsRecordsNeeded() []dnsRecord {
 	infrDomain := needInfrDomain()
+	vnetDomain := needVnetDomain()
 
 	var hosts []host
 	loadConfig("hosts", &hosts)
@@ -83,6 +94,13 @@ func dnsRecordsNeeded() []dnsRecord {
 			Value:  host.PublicIPv4,
 			TTL:    3600,
 			Reason: "HOST PUBLIC IP"})
+
+		records = append(records, dnsRecord{
+			Name:   host.Name + "." + vnetDomain,
+			Type:   "A",
+			Value:  host.PrivateIPv4,
+			TTL:    3600,
+			Reason: "HOST PRIVATE IP"})
 	}
 
 	return records
