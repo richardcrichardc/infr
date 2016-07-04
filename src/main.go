@@ -47,7 +47,8 @@ func main() {
 		{"lxc", "List, add and remove containers", lxcHelp,
 			[]subCommand{
 				{"list", nil, lxcListCmd, lxcListHelp},
-				{"add", nil, lxcListCmd, lxcListHelp}}},
+				{"add", nil, lxcAddCmd, lxcAddHelp},
+				{"remove", nil, lxcRemoveCmd, lxcRemoveHelp}}},
 		{"dns", "Manage DNS", "",
 			[]subCommand{
 				{"list", nil, dnsListCmd, "List and check DNS records relating to hosts and containers"},
