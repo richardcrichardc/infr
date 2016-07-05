@@ -82,10 +82,10 @@ func dnsRecordsNeeded() []dnsRecord {
 	infrDomain := needInfrDomain()
 	vnetDomain := needVnetDomain()
 
+	var records []dnsRecord
+
 	var hosts []host
 	loadConfig("hosts", &hosts)
-
-	var records []dnsRecord
 
 	for _, host := range hosts {
 		records = append(records, dnsRecord{
@@ -101,6 +101,19 @@ func dnsRecordsNeeded() []dnsRecord {
 			Value:  host.PrivateIPv4,
 			TTL:    3600,
 			Reason: "HOST PRIVATE IP"})
+	}
+
+	var lxcs []lxc
+	loadConfig("lxcs", &lxcs)
+
+	for _, lxc := range lxcs {
+
+		records = append(records, dnsRecord{
+			Name:   lxc.Name + "." + vnetDomain,
+			Type:   "A",
+			Value:  lxc.PrivateIPv4,
+			TTL:    3600,
+			Reason: "LXC PRIVATE IP"})
 	}
 
 	return records
@@ -126,6 +139,7 @@ func recordStatusString(v recordStatus) string {
 func checkDnsRecords(records []dnsRecord) []dnsRecord {
 	dnsDomain := needGeneralConfig("dns/domain")
 	infrDomain := needInfrDomain()
+	vnetDomain := needVnetDomain()
 
 	client := rage4.NewClient(needGeneralConfig("dns/rage4/account"), needGeneralConfig("dns/rage4/key"))
 
@@ -141,7 +155,7 @@ func checkDnsRecords(records []dnsRecord) []dnsRecord {
 
 aRecLoop:
 	for _, aRec := range actualRecords {
-		if strings.HasSuffix(aRec.Name, infrDomain) {
+		if strings.HasSuffix(aRec.Name, infrDomain) || strings.HasSuffix(aRec.Name, vnetDomain) {
 			for i, rec := range records {
 				if rec.Name == aRec.Name {
 					records[i].Rage4Id = aRec.Id

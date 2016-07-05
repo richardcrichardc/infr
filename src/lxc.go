@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strings"
 )
@@ -101,6 +102,7 @@ func lxcRemoveCmd(args []string) {
 			newLxcs = append(newLxcs, lxc)
 		} else {
 			removed = true
+			lxc.Remove()
 		}
 	}
 
@@ -130,25 +132,26 @@ func findLxc(name string) *lxc {
 
 func (l *lxc) Create() {
 	host := findHost(l.Host)
-	maskSize, _ := vnetNetwork().Mask.Size()
 
 	data := lxcCreateData{
-		lxc:             l,
-		NetworkMaskSize: maskSize,
-		GatewayIPv4:     host.BridgeIPv4}
+		lxc:                l,
+		PrivateNetwork:     vnetNetwork(),
+		PrivateNetworkMask: net.IP(vnetNetwork().Mask),
+		GatewayIPv4:        host.BridgeIPv4,
+		SSHKeys:            needKeys()}
 
 	host.RunScript(createLxcScript, data, true, true)
 }
 
 type lxcCreateData struct {
 	*lxc
-	NetworkMaskSize int
-	GatewayIPv4     string
+	PrivateNetwork     *net.IPNet
+	PrivateNetworkMask net.IP
+	GatewayIPv4        string
+	SSHKeys            string
 }
 
 const createLxcScript = `
-# This script is idempotent
-
 # echo commands and exit on error
 set -v -e
 
@@ -158,76 +161,61 @@ cat <<'EOF' | confedit /var/lib/lxc/{{.Name}}/config
 lxc.network.type = veth
 lxc.network.flags = up
 lxc.network.link = br0
-lxc.network.name = eth0
-lxc.network.ipv4 = {{.PrivateIPv4}}/{{.NetworkMaskSize}}
-lxc.network.ipv4.gateway = {{.GatewayIPv4}}
 lxc.start.auto = 1
 EOF
 
 lxc-start -d -n {{.Name}}
+lxc-wait -n {{.Name}} -s RUNNING
+
+cat <<'EOF' | lxc-attach -n {{.Name}}
+
+cat <<'EOG' > /etc/network/interfaces
+# AUTOMATICALLY GENERATED - DO NOT EDIT
+
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+iface eth0 inet static
+    address {{.PrivateIPv4}}
+    netmask {{.PrivateNetworkMask}}
+    gateway {{.GatewayIPv4}}
+    dns-nameserver 8.8.8.8
+EOG
+
+	ifdown -a
+	ifup -a
+	apt-get -y install openssh-server
+
+	adduser --disabled-password --gecos "" manager
+
+	mkdir /home/manager/.ssh
+	chmod u=rwx /home/manager/.ssh
+	echo "{{.SSHKeys}}" > /home/manager/.ssh/authorized_keys
+	chmod u=rw /home/manager/.ssh/authorized_keys
+
+	adduser manager sudo
+	# allow sudo without password (manager has not got one)
+	sed -i 's/sudo[[:space:]]*ALL=(ALL:ALL) ALL/sudo ALL=(ALL:ALL) NOPASSWD:ALL/' /etc/sudoers
+EOF
+
 `
 
-/*
-sudo lxc-create -n zzz -B btrfs -t download -- -d ubuntu -r xenial -a amd64
+func (l *lxc) Remove() {
+	host := findHost(l.Host)
+	host.RunScript(removeLxcScript, l, true, true)
+}
 
-# Template used to create this container: /usr/share/lxc/templates/lxc-download
-# Parameters passed to the template: -d ubuntu -r xenial -a amd64
-# For additional config options, please look at lxc.container.conf(5)
+const removeLxcScript = `
+# echo commands and exit on error
+set -v -e
 
-# Distribution configuration
-lxc.include = /usr/share/lxc/config/ubuntu.common.conf
-lxc.arch = x86_64
-
-# Container specific configuration
-lxc.rootfs = /var/lib/lxc/zzz/rootfs
-lxc.utsname = zzz
-
-# Network configuration
-lxc.network.type = empty
-
-----
-
-# Template used to create this container: /usr/share/lxc/templates/lxc-download
-# Parameters passed to the template:
-# For additional config options, please look at lxc.container.conf(5)
-
-# Distribution configuration
-lxc.include = /usr/share/lxc/config/ubuntu.common.conf
-lxc.arch = x86_64
-
-# Container specific configuration
-lxc.rootfs = /var/lib/lxc/max/rootfs
-lxc.utsname = max
-
-# Network configuration
-lxc.network.type = veth
-lxc.network.flags = up
-lxc.network.link = brvm
-lxc.network.hwaddr = 52:54:00:59:70:f2
-lxc.start.auto = 1
-
-----
-
-# Template used to create this container: /usr/share/lxc/templates/lxc-debian
-# Parameters passed to the template: -r jessie
-# For additional config options, please look at lxc.container.conf(5)
-lxc.network.type = empty
-lxc.rootfs = /var/lib/lxc/castle/rootfs
-
-# Common configuration
-lxc.include = /usr/share/lxc/config/debian.common.conf
-
-# Container specific configuration
-lxc.mount = /var/lib/lxc/castle/fstab
-lxc.utsname = castle
-lxc.arch = amd64
-lxc.autodev = 1
-lxc.kmsg = 0
-lxc.network.type = veth
-lxc.network.flags = up
-lxc.network.link = brvm
-lxc.network.hwaddr = 52:54:00:59:be:ef
-lxc.start.auto = 1
-
-
-*/
+lxc-destroy -f -n {{.Name}}
+`
