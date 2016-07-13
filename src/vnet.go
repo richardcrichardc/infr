@@ -100,7 +100,6 @@ func assignedIPs() []string {
 
 	for _, host := range config.Hosts {
 		ips = append(ips, host.PrivateIPv4)
-		ips = append(ips, host.BridgeIPv4)
 	}
 
 	for _, lxc := range config.Lxcs {

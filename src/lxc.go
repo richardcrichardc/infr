@@ -127,7 +127,7 @@ func (l *lxc) Create() {
 		lxc:                l,
 		PrivateNetwork:     vnetNetwork(),
 		PrivateNetworkMask: net.IP(vnetNetwork().Mask),
-		GatewayIPv4:        host.BridgeIPv4,
+		GatewayIPv4:        host.PrivateIPv4,
 		SSHKeys:            needKeys()}
 
 	host.RunScript(createLxcScript, data, true, true)

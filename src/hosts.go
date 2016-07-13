@@ -24,7 +24,6 @@ type host struct {
 	Name        string
 	PublicIPv4  string
 	PrivateIPv4 string
-	BridgeIPv4  string
 }
 
 const hostsListHelp = `[list]
@@ -86,7 +85,7 @@ func hostsAddCmd(args []string) {
 		Name:        name,
 		PublicIPv4:  publicIPv4,
 		PrivateIPv4: vnetGetIP(),
-		BridgeIPv4:  vnetGetIP()}
+	}
 
 	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + publicIPv4 + "? (type YES to confirm) ")
 	if err != nil {
@@ -349,16 +348,14 @@ iface eth0 inet dhcp
 auto br0
 iface br0 inet static
     bridge_ports none
-    address {{.BridgeIPv4}}
+    address {{.PrivateIPv4}}
     netmask {{.PrivateNetworkMask}}
     up iptables -t nat -A POSTROUTING -s {{.PrivateNetwork}} -o eth0 -j MASQUERADE
     down iptables -t nat -D POSTROUTING -s {{.PrivateNetwork}} -o eth0 -j MASQUERADE
 
 auto zt0
 allow-hotplug zt0
-iface zt0 inet static
-    address {{.PrivateIPv4}}
-    netmask {{.PrivateNetworkMask}}
+iface zt0 inet manual
     up brctl addif br0 zt0
     down brctl delif br0 zt0
 EOF
