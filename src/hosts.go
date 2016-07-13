@@ -37,12 +37,9 @@ func hostsListCmd(args []string) {
 		errorHelpExit("hosts", "Too many arguments for 'list'.")
 	}
 
-	var hosts []host
-	loadConfig("hosts", &hosts)
-
 	fmt.Printf("NAME            PUBLIC IP       PRIVATE IP\n")
 	fmt.Printf("==========================================\n")
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		fmt.Printf("%-15s %-15s %-15s\n", host.Name, host.PublicIPv4, host.PrivateIPv4)
 	}
 }
@@ -79,13 +76,7 @@ func hostsAddCmd(args []string) {
 	sshKeys := needKeys()
 	infrDomain := needInfrDomain()
 
-	var hosts []host
-	loadConfig("hosts", &hosts)
-
-	var lastPreseedURL string
-	loadConfig("lastPreseedURL", &lastPreseedURL)
-
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		if host.Name == name {
 			errorExit("Host already exists: %s", name)
 		}
@@ -106,16 +97,17 @@ func hostsAddCmd(args []string) {
 		errorExit("ABORTING")
 	}
 
-	hosts = append(hosts, newHost)
-	saveConfig("hosts", hosts)
+	config.Hosts = append(config.Hosts, newHost)
+	saveConfig()
 
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
-	preseedURL, err := evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys, lastPreseedURL)
+	config.LastPreseedURL, err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys, config.LastPreseedURL)
 
-	if preseedURL != "" {
-		saveConfig("lastPreseedURL", preseedURL)
+	// Save preseed URL if evilbootstrap got that far, even if it otherwise failed
+	if config.LastPreseedURL != "" {
+		saveConfig()
 	}
 
 	if err != nil {
@@ -141,13 +133,10 @@ func hostsRemoveCmd(args []string) {
 
 	name := args[0]
 
-	var hosts []host
-	loadConfig("hosts", &hosts)
-
 	var newHosts []host
 	var removed bool
 
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		if host.Name != name {
 			newHosts = append(newHosts, host)
 		} else {
@@ -160,7 +149,8 @@ func hostsRemoveCmd(args []string) {
 		os.Exit(1)
 	}
 
-	saveConfig("hosts", newHosts)
+	config.Hosts = newHosts
+	saveConfig()
 
 	dnsFix()
 }
@@ -176,9 +166,7 @@ func hostsReconfigureCmd(args []string) {
 }
 
 func findHost(name string) *host {
-	var hosts []host
-	loadConfig("hosts", &hosts)
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		if host.Name == name {
 			return &host
 		}
@@ -308,17 +296,13 @@ EOF
 sysctl --system
 
 # install zerotier one
-wget -O /tmp/zerotier-one.deb https://download.zerotier.com/dist/zerotier-one_1.1.4_amd64.deb
-dpkg -i /tmp/zerotier-one.deb
-rm /tmp/zerotier-one.deb
-service zerotier-one restart
-
+wget -O - https://install.zerotier.com/ | bash
 `
 
 func (h *host) Configure() {
 	conf := hostConfigData{
 		host:               h,
-		ZerotierNetworkId:  generalConfig("vnet/zerotierNetworkId"),
+		ZerotierNetworkId:  generalConfig("vnetZerotierNetworkId"),
 		PrivateNetwork:     vnetNetwork(),
 		PrivateNetworkMask: net.IP(vnetNetwork().Mask)}
 
@@ -333,7 +317,8 @@ type hostConfigData struct {
 }
 
 const configureHostScript = `
-# This script is idempotent
+# This script is supposed to be idempotent
+# Containers lose their connection to the bridge when running this script :-(
 
 # echo commands and exit on error
 set -v -e

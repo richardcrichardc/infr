@@ -26,8 +26,6 @@ var cmds []command
 func main() {
 
 	cmds = []command{
-		{"init", "Initialise working directory and configuration file", initWorkDirHelp,
-			[]subCommand{{"", nil, initWorkDir, ""}}},
 		{"config", "Set and view configuration used by other commands", configHelp,
 			[]subCommand{
 				{"view", nil, configViewCmd, ""},
@@ -81,6 +79,7 @@ func main() {
 	}
 
 	expandWorkDirPath()
+	loadConfig()
 
 	subCmd.run(flagset.Args())
 	//}

@@ -5,16 +5,16 @@ import (
 )
 
 func vnetNetwork() *net.IPNet {
-	networkStr := needGeneralConfig("vnet/network")
+	networkStr := needGeneralConfig("vnetNetwork")
 
 	_, network, err := net.ParseCIDR(networkStr)
 	if err != nil {
-		errorExit("Unable to parse config item 'vnet/network': %s", networkStr)
+		errorExit("Unable to parse config item 'vnetNetwork': %s", networkStr)
 	}
 
 	network.IP = network.IP.To4()
 	if network.IP == nil {
-		errorExit("Config item 'vnet/network' does not support IPv6")
+		errorExit("Config item 'vnetNetwork' does not support IPv6")
 	}
 
 	return network
@@ -24,21 +24,21 @@ func vnetGetIP() string {
 
 	network := vnetNetwork()
 
-	poolStartStr := needGeneralConfig("vnet/poolStart")
-	lastStr := generalConfig("vnet/last")
+	poolStartStr := needGeneralConfig("vnetPoolStart")
+	lastStr := generalConfig("vnetLast")
 
 	poolStart := net.ParseIP(poolStartStr)
 	if poolStart == nil {
-		errorExit("Unable to parse config item 'vnet/poolStart': %s", poolStartStr)
+		errorExit("Unable to parse config item 'vnetPoolStart': %s", poolStartStr)
 	}
 
 	poolStart = poolStart.To4()
 	if poolStart == nil {
-		errorExit("Config item 'vnet/poolStart' does not support IPv6")
+		errorExit("Config item 'vnetPoolStart' does not support IPv6")
 	}
 
 	if !network.Contains(poolStart) {
-		errorExit("Config item 'vnet/poolStart' must be in network 'vnet/network'")
+		errorExit("Config item 'vnetPoolStart' must be in network 'vnetNetwork'")
 	}
 
 	var last net.IP
@@ -46,12 +46,12 @@ func vnetGetIP() string {
 	if lastStr != "" {
 		last = net.ParseIP(lastStr)
 		if last == nil {
-			errorExit("Unable to parse config item 'vnet/last': %s", lastStr)
+			errorExit("Unable to parse config item 'vnetLast': %s", lastStr)
 		}
 
 		last = last.To4()
 		if last == nil {
-			errorExit("Config item 'vnet/next' does not support IPv6")
+			errorExit("Config item 'vnetNext' does not support IPv6")
 		}
 
 	} else {
@@ -90,7 +90,7 @@ incrIPLoop:
 		}
 	}
 
-	saveConfig("general/vnet/last", lastStr)
+	config.General["vnetLast"] = lastStr
 
 	return lastStr
 }
@@ -98,16 +98,12 @@ incrIPLoop:
 func assignedIPs() []string {
 	var ips []string
 
-	var hosts []host
-	loadConfig("hosts", &hosts)
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		ips = append(ips, host.PrivateIPv4)
 		ips = append(ips, host.BridgeIPv4)
 	}
 
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-	for _, lxc := range lxcs {
+	for _, lxc := range config.Lxcs {
 		ips = append(ips, lxc.PrivateIPv4)
 	}
 

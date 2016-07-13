@@ -107,6 +107,7 @@ func genPxeScript(managerAuthKeys, lastPreseedURL string) (script, preseedURL st
 			return "", "", err
 		}
 		msg("Gist URL: %s", preseedURL)
+		msgLF()
 	}
 
 	return fmt.Sprintf(ipxeTemplate, preseedURL), preseedURL, nil

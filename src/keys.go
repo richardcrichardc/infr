@@ -21,9 +21,7 @@ func keysListCmd(args []string) {
 		errorHelpExit("keys", "Too many arguments for 'list'.")
 	}
 
-	var keys string
-	loadConfig("keys", &keys)
-	fmt.Println(keys)
+	fmt.Println(config.Keys)
 }
 
 func keysAddCmd(args []string) {
@@ -37,14 +35,12 @@ func keysAddCmd(args []string) {
 	}
 	newKeys := strings.Split(string(newKeysBytes), "\n")
 
-	var confKeysStr string
-	loadConfig("keys", &confKeysStr)
-	confKeys := strings.Split(confKeysStr, "\n")
+	confKeys := strings.Split(config.Keys, "\n")
 
 	allKeys := stripEmptyStrings(uniqueStrings(append(confKeys, newKeys...)))
-	allKeysStr := strings.Join(allKeys, "\n")
+	config.Keys = strings.Join(allKeys, "\n")
 
-	saveConfig("keys", allKeysStr)
+	saveConfig()
 }
 
 func keysRemoveCmd(args []string) {
@@ -58,14 +54,12 @@ func keysRemoveCmd(args []string) {
 	}
 	removeKeys := strings.Split(string(removeKeysBytes), "\n")
 
-	var confKeysStr string
-	loadConfig("keys", &confKeysStr)
-	confKeys := strings.Split(confKeysStr, "\n")
+	confKeys := strings.Split(config.Keys, "\n")
 
 	allKeys := removeStrings(confKeys, removeKeys)
-	allKeysStr := strings.Join(allKeys, "\n")
+	config.Keys = strings.Join(allKeys, "\n")
 
-	saveConfig("keys", allKeysStr)
+	saveConfig()
 }
 
 func uniqueStrings(s []string) []string {
@@ -119,12 +113,8 @@ sloop:
 }
 
 func needKeys() string {
-	var keys string
-	if loadConfig("keys", &keys) {
-		return keys
+	if config.Keys == "" {
+		errorExit("No ssh keys configured. Use `infr keys add <keyfile>` to add keys.")
 	}
-
-	errorExit("keys", "No ssh keys configured. Use `infr keys add <keyfile>` to add keys.")
-
-	return "" // never happens
+	return config.Keys
 }

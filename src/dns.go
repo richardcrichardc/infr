@@ -47,7 +47,7 @@ func dnsListCmd(args []string) {
 	}
 
 	if !managed {
-		fmt.Printf("\nDNS records are not automatically managed, set 'dns/rage4/..' config settings to enable.\n")
+		fmt.Printf("\nDNS records are not automatically managed, set 'dnsRage4..' config settings to enable.\n")
 	}
 
 }
@@ -63,19 +63,19 @@ func dnsFix() {
 }
 
 func needInfrDomain() string {
-	dnsDomain := needGeneralConfig("dns/domain")
-	dnsPrefix := needGeneralConfig("dns/prefix")
+	dnsDomain := needGeneralConfig("dnsDomain")
+	dnsPrefix := needGeneralConfig("dnsPrefix")
 	return dnsPrefix + "." + dnsDomain
 }
 
 func needVnetDomain() string {
-	dnsDomain := needGeneralConfig("dns/domain")
-	vnetPrefix := needGeneralConfig("vnet/prefix")
+	dnsDomain := needGeneralConfig("dnsDomain")
+	vnetPrefix := needGeneralConfig("vnetPrefix")
 	return vnetPrefix + "." + dnsDomain
 }
 
 func dnsIsManaged() bool {
-	return generalConfig("dns/rage4/account") != ""
+	return generalConfig("dnsRage4Account") != ""
 }
 
 func dnsRecordsNeeded() []dnsRecord {
@@ -84,10 +84,7 @@ func dnsRecordsNeeded() []dnsRecord {
 
 	var records []dnsRecord
 
-	var hosts []host
-	loadConfig("hosts", &hosts)
-
-	for _, host := range hosts {
+	for _, host := range config.Hosts {
 		records = append(records, dnsRecord{
 			Name:   host.Name + "." + infrDomain,
 			Type:   "A",
@@ -103,10 +100,7 @@ func dnsRecordsNeeded() []dnsRecord {
 			Reason: "HOST PRIVATE IP"})
 	}
 
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-
-	for _, lxc := range lxcs {
+	for _, lxc := range config.Lxcs {
 
 		records = append(records, dnsRecord{
 			Name:   lxc.Name + "." + vnetDomain,
@@ -137,11 +131,11 @@ func recordStatusString(v recordStatus) string {
 }
 
 func checkDnsRecords(records []dnsRecord) []dnsRecord {
-	dnsDomain := needGeneralConfig("dns/domain")
+	dnsDomain := needGeneralConfig("dnsDomain")
 	infrDomain := needInfrDomain()
 	vnetDomain := needVnetDomain()
 
-	client := rage4.NewClient(needGeneralConfig("dns/rage4/account"), needGeneralConfig("dns/rage4/key"))
+	client := rage4.NewClient(needGeneralConfig("dnsRage4Account"), needGeneralConfig("dnsRage4Key"))
 
 	domain, err := client.GetDomainByName(dnsDomain)
 	checkErr(err)
@@ -186,9 +180,9 @@ aRecLoop:
 }
 
 func fixDnsRecords(records []dnsRecord) {
-	dnsDomain := needGeneralConfig("dns/domain")
+	dnsDomain := needGeneralConfig("dnsDomain")
 
-	client := rage4.NewClient(needGeneralConfig("dns/rage4/account"), needGeneralConfig("dns/rage4/key"))
+	client := rage4.NewClient(needGeneralConfig("dnsRage4Account"), needGeneralConfig("dnsRage4Key"))
 
 	domain, err := client.GetDomainByName(dnsDomain)
 	checkErr(err)

@@ -30,9 +30,7 @@ func lxcListCmd(args []string) {
 		errorHelpExit("lxc", "Too many arguments for 'list'.")
 	}
 
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-	for _, lxc := range lxcs {
+	for _, lxc := range config.Lxcs {
 		fmt.Printf("%-15s %-15s %-15s\n", lxc.Name, lxc.Host, lxc.PrivateIPv4)
 	}
 }
@@ -52,9 +50,7 @@ func lxcAddCmd(args []string) {
 	release := strings.ToLower(args[2])
 	hostname := strings.ToLower(args[3])
 
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-	for _, l := range lxcs {
+	for _, l := range config.Lxcs {
 		if l.Name == name {
 			errorExit("Lxc already exists: %s", name)
 		}
@@ -69,9 +65,8 @@ func lxcAddCmd(args []string) {
 		Distro:      distro,
 		Release:     release}
 
-	lxcs = append(lxcs, newLxc)
-
-	saveConfig("lxcs", lxcs)
+	config.Lxcs = append(config.Lxcs, newLxc)
+	saveConfig()
 
 	newLxc.Create()
 	dnsFix()
@@ -91,13 +86,10 @@ func lxcRemoveCmd(args []string) {
 
 	name := strings.ToLower(args[0])
 
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-
 	var newLxcs []lxc
 	var removed bool
 
-	for _, lxc := range lxcs {
+	for _, lxc := range config.Lxcs {
 		if lxc.Name != name {
 			newLxcs = append(newLxcs, lxc)
 		} else {
@@ -111,16 +103,14 @@ func lxcRemoveCmd(args []string) {
 		os.Exit(1)
 	}
 
-	saveConfig("lxcs", newLxcs)
+	config.Lxcs = newLxcs
+	saveConfig()
 
 	dnsFix()
 }
 
 func findLxc(name string) *lxc {
-	var lxcs []lxc
-	loadConfig("lxcs", &lxcs)
-
-	for _, l := range lxcs {
+	for _, l := range config.Lxcs {
 		if l.Name == name {
 			return &l
 		}
