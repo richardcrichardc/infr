@@ -34,10 +34,10 @@ func dnsListCmd(args []string) {
 		records = checkDnsRecords(records)
 	}
 
-	fmt.Println("FQDN                                     TYPE  VALUE           TTL     FOR             STATUS")
-	fmt.Println("=============================================================================================")
+	fmt.Println("FQDN                                     TYPE  VALUE           TTL     FOR                 STATUS")
+	fmt.Println("=================================================================================================")
 	for _, record := range records {
-		fmt.Printf("%-40s %-5s %-15s %-7d %-15s %-6s\n",
+		fmt.Printf("%-40s %-5s %-15s %-7d %-19s %-6s\n",
 			record.Name,
 			record.Type,
 			record.Value,
@@ -101,6 +101,15 @@ func dnsRecordsNeeded() []dnsRecord {
 	}
 
 	for _, lxc := range config.Lxcs {
+
+		host := lxc.FindHost()
+
+		records = append(records, dnsRecord{
+			Name:   lxc.Name + "." + infrDomain,
+			Type:   "A",
+			Value:  host.PublicIPv4,
+			TTL:    3600,
+			Reason: "LXC HOST PUBLIC IP"})
 
 		records = append(records, dnsRecord{
 			Name:   lxc.Name + "." + vnetDomain,

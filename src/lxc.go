@@ -12,12 +12,30 @@ const lxcHelp = `Usage: infr con [subcommand] [args]
 Manage containers...
 `
 
+type httpAction int
+
+const (
+	HTTPNONE = iota
+	HTTPFORWARD
+	HTTPREDIRECT
+)
+
+type httpsAction int
+
+const (
+	HTTPSNONE = iota
+	HTTPSTERMINATE
+)
+
 type lxc struct {
 	Name        string
 	Host        string
 	PrivateIPv4 string
 	Distro      string
 	Release     string
+	Aliases     []string
+	Http        httpAction
+	Https       httpsAction
 }
 
 const lxcListHelp = `[list]
@@ -109,10 +127,119 @@ func lxcRemoveCmd(args []string) {
 	dnsFix()
 }
 
+func lxcShowCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("lxc", "Wrong number of arguments for 'show'.")
+	}
+
+	lxc := findLxc(args[0])
+
+	fmt.Printf("Name:     %s\n", lxc.Name)
+	fmt.Printf("Host:     %s\n", lxc.Host)
+	fmt.Printf("Distro:   %s %s\n", lxc.Distro, lxc.Release)
+	fmt.Printf("Aliases:  %s\n", strings.Join(lxc.Aliases, ", "))
+	fmt.Printf("HTTP: 	  %s\n", httpActionString(lxc.Http))
+	fmt.Printf("HTTPS:    %s\n", httpsActionString(lxc.Https))
+}
+
+func httpActionString(a httpAction) string {
+	switch a {
+	case HTTPNONE:
+		return "NONE"
+	case HTTPFORWARD:
+		return "FORWARD"
+	case HTTPREDIRECT:
+		return "REDIRECT"
+	default:
+		panic("Unknown httpAction")
+	}
+}
+
+func httpsActionString(a httpsAction) string {
+	switch a {
+	case HTTPSNONE:
+		return "NONE"
+	case HTTPSTERMINATE:
+		return "TERMINATE"
+	default:
+		panic("Unknown httpAction")
+	}
+}
+
+func lxcAliasAddCmd(args []string) {
+	if len(args) != 2 {
+		errorHelpExit("lxc", "Wrong number of arguments for 'alias-add'.")
+	}
+
+	lxc := findLxc(args[0])
+	alias := strings.ToLower(args[1])
+
+	lxc.Aliases = uniqueStrings(append(lxc.Aliases, alias))
+	saveConfig()
+	lxc.FindHost().Configure()
+}
+
+func lxcAliasRemoveCmd(args []string) {
+	if len(args) != 2 {
+		errorHelpExit("lxc", "Wrong number of arguments for 'alias-remove'.")
+	}
+
+	lxc := findLxc(args[0])
+	alias := strings.ToLower(args[1])
+
+	lxc.Aliases = removeStrings(lxc.Aliases, []string{alias})
+	saveConfig()
+	lxc.FindHost().Configure()
+}
+
+func lxcHttpCmd(args []string) {
+	if len(args) != 2 {
+		errorHelpExit("lxc", "Wrong number of arguments for 'http'.")
+	}
+
+	lxc := findLxc(args[0])
+	option := strings.ToUpper(args[1])
+
+	switch option {
+	case "NONE":
+		lxc.Http = HTTPNONE
+	case "FORWARD":
+		lxc.Http = HTTPFORWARD
+	case "REDIRECT":
+		lxc.Http = HTTPREDIRECT
+	default:
+		errorExit("Invalid option, please specify: NONE, FORWARD or REDIRECT")
+	}
+
+	saveConfig()
+	lxc.FindHost().Configure()
+}
+
+func lxcHttpsCmd(args []string) {
+	if len(args) != 2 {
+		errorHelpExit("lxc", "Wrong number of arguments for 'https'.")
+	}
+
+	lxc := findLxc(args[0])
+	option := strings.ToUpper(args[1])
+
+	switch option {
+	case "NONE":
+		lxc.Https = HTTPSNONE
+	case "TERMINATE":
+		lxc.Https = HTTPSTERMINATE
+	default:
+		errorExit("Invalid option, please specify: NONE or TERMINATE")
+	}
+
+	saveConfig()
+	lxc.FindHost().Configure()
+}
+
 func findLxc(name string) *lxc {
-	for _, l := range config.Lxcs {
+	for i, l := range config.Lxcs {
 		if l.Name == name {
-			return &l
+			return &config.Lxcs[i]
 		}
 	}
 
@@ -120,8 +247,12 @@ func findLxc(name string) *lxc {
 	return nil
 }
 
+func (l *lxc) FindHost() *host {
+	return findHost(l.Host)
+}
+
 func (l *lxc) Create() {
-	host := findHost(l.Host)
+	host := l.FindHost()
 
 	data := lxcCreateData{
 		lxc:                l,
@@ -209,3 +340,20 @@ set -v -e
 
 lxc-destroy -f -n {{.Name}}
 `
+
+func (l *lxc) HttpBackend() string {
+	switch l.Http {
+	case HTTPNONE:
+		return ""
+	case HTTPFORWARD:
+		return l.Name + "_http"
+	case HTTPREDIRECT:
+		return "redirect_https"
+	default:
+		panic("Unexpected httpAction")
+	}
+}
+
+func (l *lxc) FQDN() string {
+	return l.Name + "." + needInfrDomain()
+}

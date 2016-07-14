@@ -47,7 +47,13 @@ func main() {
 			[]subCommand{
 				{"list", nil, lxcListCmd, lxcListHelp},
 				{"add", nil, lxcAddCmd, lxcAddHelp},
-				{"remove", nil, lxcRemoveCmd, lxcRemoveHelp}}},
+				{"remove", nil, lxcRemoveCmd, lxcRemoveHelp},
+				{"show", nil, lxcShowCmd, ""},
+				{"alias-add", nil, lxcAliasAddCmd, ""},
+				{"alias-remove", nil, lxcAliasRemoveCmd, ""},
+				{"http", nil, lxcHttpCmd, ""},
+				{"https", nil, lxcHttpsCmd, ""}}},
+
 		{"dns", "Manage DNS", "",
 			[]subCommand{
 				{"list", nil, dnsListCmd, "List and check DNS records relating to hosts and containers"},

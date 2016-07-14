@@ -199,6 +199,18 @@ func findHost(name string) *host {
 	return nil
 }
 
+func (h *host) AllLxcs() []*lxc {
+	var lxcs []*lxc
+
+	for i, l := range config.Lxcs {
+		if l.Host == h.Name {
+			lxcs = append(lxcs, &config.Lxcs[i])
+		}
+	}
+
+	return lxcs
+}
+
 func (h *host) RunScript(scriptTmpl string, data interface{}, echo, sudo bool) {
 	var script bytes.Buffer
 
@@ -233,7 +245,7 @@ const installSoftwareScript = `
 set -v -e
 
 # install various packages
-apt-get -y install lxc bridge-utils
+apt-get -y install lxc bridge-utils haproxy
 
 # install confedit script used by this and other scripts
 cat << EOF > /usr/local/bin/confedit
@@ -360,6 +372,29 @@ if [ -n "{{.ZerotierNetworkId}}" ]
 then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
+
+# Configure HAProxy
+
+cat <<'EOF' > /etc/haproxy/errors/no-backend.http
+HTTP/1.0 404 Service Unavailable
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>404 Not Found</h1>
+No such site.
+</body></html>
+
+EOF
+
+cat <<'EOF' > /etc/haproxy/haproxy.cfg
+{{.host.HAProxyCfg}}
+EOF
+
+
+
+
+service haproxy reload
 
 `
 
