@@ -113,6 +113,7 @@ func hostsAddCmd(args []string) {
 		errorExit("Error whilst reinstalling target: %s", err)
 	}
 
+	newHost.ConfigureNetwork()
 	newHost.InstallSoftware()
 	newHost.Configure()
 	dnsFix()
@@ -160,8 +161,31 @@ func hostsReconfigureCmd(args []string) {
 	}
 
 	host := findHost(args[0])
+
+	// don't reconfigure network as that knocks all the containers off the bridge
 	host.InstallSoftware()
 	host.Configure()
+}
+
+func hostsReconfigureNetworkCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("hosts", "Wrong number of arguments for 'reconfigure'.")
+	}
+
+	host := findHost(args[0])
+
+	input, err := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
+HOST OR CONTAINERS TO REATTACH) AND IS ONLY NEEDED IF VNET IP CHANGES.
+DO YOU WANT TO CONTINUE? (type YES to confirm) `)
+	if err != nil {
+		errorExit("%s", err.Error())
+	}
+
+	if input != "YES\n" {
+		errorExit("ABORTING")
+	}
+
+	host.ConfigureNetwork()
 }
 
 func findHost(name string) *host {
@@ -300,10 +324,9 @@ wget -O - https://install.zerotier.com/ | bash
 
 func (h *host) Configure() {
 	conf := hostConfigData{
-		host:               h,
-		ZerotierNetworkId:  generalConfig("vnetZerotierNetworkId"),
-		PrivateNetwork:     vnetNetwork(),
-		PrivateNetworkMask: net.IP(vnetNetwork().Mask)}
+		host:              h,
+		ZerotierNetworkId: generalConfig("vnetZerotierNetworkId"),
+	}
 
 	h.RunScript(configureHostScript, conf, true, true)
 }
@@ -327,6 +350,31 @@ if [ -n "{{.ZerotierNetworkId}}" ]
 then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
+
+`
+
+func (h *host) ConfigureNetwork() {
+	conf := hostConfigData{
+		host:               h,
+		ZerotierNetworkId:  generalConfig("vnetZerotierNetworkId"),
+		PrivateNetwork:     vnetNetwork(),
+		PrivateNetworkMask: net.IP(vnetNetwork().Mask)}
+
+	h.RunScript(configureHostNetworkScript, conf, true, true)
+}
+
+type hostConfigNetworkData struct {
+	*host
+	ZerotierNetworkId  string
+	PrivateNetwork     *net.IPNet
+	PrivateNetworkMask net.IP
+}
+
+const configureHostNetworkScript = `
+# Containers lose their connection to the bridge when running this script :-(
+
+# echo commands and exit on error
+set -v -e
 
 cat <<'EOF' > /etc/network/interfaces
 # AUTOMATICALLY GENERATED - DO NOT EDIT
@@ -362,5 +410,4 @@ EOF
 
 ifdown --all
 ifup --all
-
 `
