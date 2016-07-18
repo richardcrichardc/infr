@@ -1,24 +1,22 @@
 package main
 
 import (
-	"bytes"
-	"text/template"
+	"strings"
 )
 
 func (h *host) HAProxyCfg() string {
-	data := &haproxyCfgData{
-		host: h,
+	return executeTemplate(haproxyCfgTmpl, &haproxyCfgData{host: h})
+}
+
+func (h *host) HAProxyHttpsDomains() string {
+	var fqdns []string
+
+	for _, lxc := range h.AllLxcs() {
+		fqdns = append(fqdns, lxc.Name+"."+needInfrDomain())
+		fqdns = append(fqdns, lxc.Aliases...)
 	}
 
-	var out bytes.Buffer
-
-	tmpl := template.Must(template.New("script").Parse(haproxyCfgTmpl))
-	err := tmpl.Execute(&out, data)
-	if err != nil {
-		errorExit("Error executing haproxy template: %s", err)
-	}
-
-	return out.String()
+	return strings.Join(fqdns, "\n")
 }
 
 type haproxyCfgData struct {
@@ -67,6 +65,9 @@ frontend http
         bind {{.host.PublicIPv4}}:80
         mode http
         option httplog
+
+        use_backend certbot if { path_beg /.well-known/ }
+
 {{ range .host.AllLxcs -}}
 	{{- if .HttpBackend }}
         use_backend {{.HttpBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
@@ -76,11 +77,24 @@ frontend http
 		default_backend no_backend
 
 
+frontend https
+        bind {{.host.PublicIPv4}}:443 ssl crt /etc/haproxy/ssl/default.crt crt-list /etc/haproxy/ssl-crt-list
+        mode http
+        option httplog
+{{ range .host.AllLxcs -}}
+    {{- if .HttpsBackend }}
+        use_backend {{.HttpsBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
+    {{- end -}}
+{{- end }}
+
 {{ range .host.AllLxcs -}}
 backend {{.Name}}_http
         server {{.Name}} {{.PrivateIPv4}}:80
 
 {{ end }}
+
+backend certbot
+        server localhost 127.0.0.1:9980
 
 backend redirect_https
         redirect scheme https

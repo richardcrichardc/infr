@@ -354,6 +354,17 @@ func (l *lxc) HttpBackend() string {
 	}
 }
 
+func (l *lxc) HttpsBackend() string {
+	switch l.Https {
+	case HTTPSNONE:
+		return ""
+	case HTTPSTERMINATE:
+		return l.Name + "_http"
+	default:
+		panic("Unexpected httpsAction")
+	}
+}
+
 func (l *lxc) FQDN() string {
 	return l.Name + "." + needInfrDomain()
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"infr/easyssh"
@@ -9,7 +8,6 @@ import (
 	"infr/util"
 	"net"
 	"os"
-	"text/template"
 )
 
 const hostsHelp = `Usage: infr hosts [subcommand] [args]
@@ -162,9 +160,17 @@ func hostsReconfigureCmd(args []string) {
 
 	host := findHost(args[0])
 
-	// don't reconfigure network as that knocks all the containers off the bridge
-	host.InstallSoftware()
 	host.Configure()
+}
+
+func hostsReinstallSoftwareCmd(args []string) {
+	if len(args) != 1 {
+		errorHelpExit("hosts", "Wrong number of arguments for 'reinstall-software'.")
+	}
+
+	host := findHost(args[0])
+
+	host.InstallSoftware()
 }
 
 func hostsReconfigureNetworkCmd(args []string) {
@@ -212,13 +218,8 @@ func (h *host) AllLxcs() []*lxc {
 }
 
 func (h *host) RunScript(scriptTmpl string, data interface{}, echo, sudo bool) {
-	var script bytes.Buffer
 
-	tmpl := template.Must(template.New("script").Parse(scriptTmpl))
-	err := tmpl.Execute(&script, data)
-	if err != nil {
-		errorExit("Error executing script template: %s", err)
-	}
+	script := executeTemplate(scriptTmpl, data)
 
 	ssh := &easyssh.MakeConfig{
 		User:   "manager",
@@ -228,7 +229,7 @@ func (h *host) RunScript(scriptTmpl string, data interface{}, echo, sudo bool) {
 	}
 
 	fmt.Printf("Running script on remote host: %s\n", h.Name)
-	err = ssh.RunScript(script.String(), echo, sudo)
+	err := ssh.RunScript(script, echo, sudo)
 	if err != nil {
 		errorExit("Error running remote script: %s", err)
 	}
@@ -244,8 +245,76 @@ const installSoftwareScript = `
 # echo commands and exit on error
 set -v -e
 
+# enable backports so we can install certbot
+
+echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
+apt-get update
+
 # install various packages
-apt-get -y install lxc bridge-utils haproxy
+apt-get -y install lxc bridge-utils haproxy ssl-cert webfs
+apt-get -y install certbot -t jessie-backports
+
+# create ssl directory for haproxy
+mkdir -p /etc/haproxy/ssl
+
+# create doc_root and .wellknown for certbot
+mkdir -p /etc/haproxy/certbot/.well-known
+
+
+# script for getting certbot to issue ssl certificates
+cat << EOF > /etc/haproxy/issue-ssl-certs
+#!/bin/bash
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email \$1 -d \$FQDN
+  fi
+done
+EOF
+chmod +x /etc/haproxy/issue-ssl-certs
+
+
+# script for installing certs issued by certbot
+cat << EOF > /etc/haproxy/install-ssl-certs
+#!/bin/bash
+
+# remove old certs and cert list
+rm -f /etc/haproxy/ssl/*
+truncate --size=0 /etc/haproxy/ssl-crt-list
+
+# create default file used when HOST does not match any other certs
+cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+    LIVEDIR=/etc/letsencrypt/live/\$FQDN
+    if [ -e "\$LIVEDIR" ]; then
+        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
+        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
+        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
+    fi
+  fi
+done
+EOF
+chmod +x /etc/haproxy/install-ssl-certs
+
+
+# the certbot package has a cron job to renew certificates on a daily basis
+# here we add a daily cron job to install the renewed certificates
+ln -sf /etc/haproxy/install-ssl-certs /etc/cron.daily/install-ssl-certs
+
+# config file for webfs - web server used for hosting .web-known directory used to issue ssl certificates
+cat << EOF > /etc/webfsd.conf
+
+web_root="/etc/haproxy/certbot"
+web_ip="127.0.0.1"
+web_port="9980"
+web_user="www-data"
+web_group="www-data"
+web_extras="-j"
+EOF
+
+service webfs restart
 
 # install confedit script used by this and other scripts
 cat << EOF > /usr/local/bin/confedit
@@ -359,10 +428,8 @@ set -v -e
 
 
 # Leave zerotier networks before joining so interface comes up as zt0
-zerotier-cli listnetworks | cut -d ' ' -f 3 | while read networkId
-do
-   if [ "$networkId" != "<nwid>" ]
-   then
+zerotier-cli listnetworks | cut -d ' ' -f 3 | while read networkId; do
+   if [ "$networkId" != "<nwid>" ]; then
       zerotier-cli leave $networkId
    fi
 done
@@ -391,8 +458,12 @@ cat <<'EOF' > /etc/haproxy/haproxy.cfg
 {{.host.HAProxyCfg}}
 EOF
 
+cat <<'EOF' > /etc/haproxy/https-domains
+{{.host.HAProxyHttpsDomains}}
+EOF
 
-
+/etc/haproxy/issue-ssl-certs richard@tawherotech.nz
+/etc/haproxy/install-ssl-certs
 
 service haproxy reload
 

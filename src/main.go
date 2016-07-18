@@ -42,6 +42,7 @@ func main() {
 				{"add", hostsAddFlags, hostsAddCmd, hostsAddHelp},
 				{"remove", nil, hostsRemoveCmd, hostsRemoveHelp},
 				{"reconfigure", nil, hostsReconfigureCmd, ""},
+				{"reinstall-software", nil, hostsReinstallSoftwareCmd, ""},
 				{"reconfigure-network", nil, hostsReconfigureNetworkCmd, ""}}},
 		{"lxc", "List, add and remove containers", lxcHelp,
 			[]subCommand{
