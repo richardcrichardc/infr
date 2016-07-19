@@ -15,7 +15,7 @@ var cwd string
 var config struct {
 	General        map[string]string
 	Keys           string
-	Hosts          []host
+	Hosts          []*host
 	Lxcs           []lxc
 	LastPreseedURL string
 }

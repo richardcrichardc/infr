@@ -7,7 +7,6 @@ import (
 	"infr/evilbootstrap"
 	"infr/util"
 	"net"
-	"os"
 )
 
 const hostsHelp = `Usage: infr hosts [subcommand] [args]
@@ -24,7 +23,7 @@ type host struct {
 	PrivateIPv4 string
 }
 
-func hostCmd(args []string) {
+func hostsCmd(args []string) {
 	if len(args) == 0 {
 		hostsListCmd(args)
 	} else {
@@ -33,17 +32,31 @@ func hostCmd(args []string) {
 			hostsListCmd(parseFlags(args, noFlags))
 		case "add":
 			hostsAddCmd(parseFlags(args, hostsAddFlags))
-		case "remove":
-			hostsRemoveCmd(parseFlags(args, noFlags))
-		case "reconfigure":
-			hostsReconfigureCmd(parseFlags(args, noFlags))
-		case "reinstall-software":
-			hostsReinstallSoftwareCmd(parseFlags(args, noFlags))
-		case "reconfigure-network":
-			hostsReconfigureNetworkCmd(parseFlags(args, noFlags))
 		default:
-			errorExit("Invalid command: %s", args[0])
+			errorExit("Invalid command: hosts %s", args[0])
 		}
+	}
+}
+
+func hostCmd(args []string) {
+	if len(args) < 2 {
+		errorExit("Not enough arguments for 'host'.")
+	}
+
+	h := findHost(args[0])
+	args = args[1:]
+
+	switch args[0] {
+	case "remove":
+		hostsRemoveCmd(h, parseFlags(args, noFlags))
+	case "reconfigure":
+		hostsReconfigureCmd(h, parseFlags(args, noFlags))
+	case "reinstall-software":
+		hostsReinstallSoftwareCmd(h, parseFlags(args, noFlags))
+	case "reconfigure-network":
+		hostsReconfigureNetworkCmd(h, parseFlags(args, noFlags))
+	default:
+		errorExit("Invalid command: %s", args[0])
 	}
 }
 
@@ -117,7 +130,7 @@ func hostsAddCmd(args []string) {
 		errorExit("ABORTING")
 	}
 
-	config.Hosts = append(config.Hosts, newHost)
+	config.Hosts = append(config.Hosts, &newHost)
 	saveConfig()
 
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
@@ -147,27 +160,17 @@ Remove named host from cluster.
 At this stage the host is just removed from list of hosts.
 `
 
-func hostsRemoveCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'remove'.")
+func hostsRemoveCmd(toRemove *host, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'host <name> remove'.")
 	}
 
-	name := args[0]
-
-	var newHosts []host
-	var removed bool
+	var newHosts []*host
 
 	for _, host := range config.Hosts {
-		if host.Name != name {
+		if toRemove != host {
 			newHosts = append(newHosts, host)
-		} else {
-			removed = true
 		}
-	}
-
-	if !removed {
-		fmt.Printf("Host not found: %s\n", name)
-		os.Exit(1)
 	}
 
 	config.Hosts = newHosts
@@ -176,32 +179,26 @@ func hostsRemoveCmd(args []string) {
 	dnsFix()
 }
 
-func hostsReconfigureCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'reconfigure'.")
+func hostsReconfigureCmd(h *host, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'host <name> reconfigure'.")
 	}
 
-	host := findHost(args[0])
-
-	host.Configure()
+	h.Configure()
 }
 
-func hostsReinstallSoftwareCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'reinstall-software'.")
+func hostsReinstallSoftwareCmd(h *host, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'host <name> reinstall-software'.")
 	}
 
-	host := findHost(args[0])
-
-	host.InstallSoftware()
+	h.InstallSoftware()
 }
 
-func hostsReconfigureNetworkCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'reconfigure'.")
+func hostsReconfigureNetworkCmd(h *host, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'host <name> reconfigure-network'.")
 	}
-
-	host := findHost(args[0])
 
 	input, err := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
 HOST OR CONTAINERS TO REATTACH) AND IS ONLY NEEDED IF VNET IP CHANGES.
@@ -214,13 +211,13 @@ DO YOU WANT TO CONTINUE? (type YES to confirm) `)
 		errorExit("ABORTING")
 	}
 
-	host.ConfigureNetwork()
+	h.ConfigureNetwork()
 }
 
 func findHost(name string) *host {
 	for _, host := range config.Hosts {
 		if host.Name == name {
-			return &host
+			return host
 		}
 	}
 

@@ -24,6 +24,8 @@ func main() {
 		configCmd(parseFlags(args, noFlags))
 	case "keys":
 		keysCmd(parseFlags(args, noFlags))
+	case "hosts":
+		hostsCmd(parseFlags(args, noFlags))
 	case "host":
 		hostCmd(parseFlags(args, noFlags))
 	case "lxc":
