@@ -4,6 +4,23 @@ import (
 	"fmt"
 )
 
+func configCmd(args []string) {
+	if len(args) == 0 {
+		configViewCmd(args)
+	} else {
+		switch args[0] {
+		case "view":
+			configViewCmd(parseFlags(args, noFlags))
+		case "set":
+			configSetCmd(parseFlags(args, noFlags))
+		case "unset":
+			configUnsetCmd(parseFlags(args, noFlags))
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
 const configHelp = `Usage: infr config view [<name>]
        infr config set <name> <value>
        infr config unset <name>
@@ -52,13 +69,13 @@ func configViewCmd(args []string) {
 			errorExit("No config for: %s", name)
 		}
 	default:
-		errorHelpExit("config", "Too many arguments for 'view'.")
+		errorExit("Too many arguments for 'view'.")
 	}
 }
 
 func configSetCmd(args []string) {
 	if len(args) == 0 || len(args) > 2 {
-		errorHelpExit("config", "Wrong number of arguments for 'set'.")
+		errorExit("Wrong number of arguments for 'set'.")
 	}
 
 	config.General[args[0]] = args[1]
@@ -67,7 +84,7 @@ func configSetCmd(args []string) {
 
 func configUnsetCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("config", "Wrong number of arguments for 'unset'.")
+		errorExit("Wrong number of arguments for 'unset'.")
 	}
 
 	delete(config.General, args[0])
@@ -81,7 +98,7 @@ func generalConfig(name string) string {
 func needGeneralConfig(name string) string {
 	value, ok := config.General[name]
 	if !ok {
-		errorHelpExit("config", "'%s' not configured. Use `infr config set %s <value>` to configure.", name, name)
+		errorExit("'%s' not configured. Use `infr config set %s <value>` to configure.", name, name)
 	}
 
 	return value

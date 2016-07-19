@@ -24,6 +24,29 @@ type host struct {
 	PrivateIPv4 string
 }
 
+func hostCmd(args []string) {
+	if len(args) == 0 {
+		hostsListCmd(args)
+	} else {
+		switch args[0] {
+		case "list":
+			hostsListCmd(parseFlags(args, noFlags))
+		case "add":
+			hostsAddCmd(parseFlags(args, hostsAddFlags))
+		case "remove":
+			hostsRemoveCmd(parseFlags(args, noFlags))
+		case "reconfigure":
+			hostsReconfigureCmd(parseFlags(args, noFlags))
+		case "reinstall-software":
+			hostsReinstallSoftwareCmd(parseFlags(args, noFlags))
+		case "reconfigure-network":
+			hostsReconfigureNetworkCmd(parseFlags(args, noFlags))
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
 const hostsListHelp = `[list]
 
 List all hosts.
@@ -31,7 +54,7 @@ List all hosts.
 
 func hostsListCmd(args []string) {
 	if len(args) != 0 {
-		errorHelpExit("hosts", "Too many arguments for 'list'.")
+		errorExit("Too many arguments for 'list'.")
 	}
 
 	fmt.Printf("NAME            PUBLIC IP       PRIVATE IP\n")
@@ -64,7 +87,7 @@ func hostsAddFlags(fs *flag.FlagSet) {
 
 func hostsAddCmd(args []string) {
 	if len(args) != 2 {
-		errorHelpExit("hosts", "Wrong number of arguments for 'add'.")
+		errorExit("Wrong number of arguments for 'add'.")
 	}
 
 	name := args[0]
@@ -126,7 +149,7 @@ At this stage the host is just removed from list of hosts.
 
 func hostsRemoveCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("hosts", "Wrong number of arguments for 'remove'.")
+		errorExit("Wrong number of arguments for 'remove'.")
 	}
 
 	name := args[0]
@@ -155,7 +178,7 @@ func hostsRemoveCmd(args []string) {
 
 func hostsReconfigureCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("hosts", "Wrong number of arguments for 'reconfigure'.")
+		errorExit("Wrong number of arguments for 'reconfigure'.")
 	}
 
 	host := findHost(args[0])
@@ -165,7 +188,7 @@ func hostsReconfigureCmd(args []string) {
 
 func hostsReinstallSoftwareCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("hosts", "Wrong number of arguments for 'reinstall-software'.")
+		errorExit("Wrong number of arguments for 'reinstall-software'.")
 	}
 
 	host := findHost(args[0])
@@ -175,7 +198,7 @@ func hostsReinstallSoftwareCmd(args []string) {
 
 func hostsReconfigureNetworkCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("hosts", "Wrong number of arguments for 'reconfigure'.")
+		errorExit("Wrong number of arguments for 'reconfigure'.")
 	}
 
 	host := findHost(args[0])

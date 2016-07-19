@@ -7,6 +7,23 @@ import (
 	"strings"
 )
 
+func keysCmd(args []string) {
+	if len(args) == 0 {
+		keysListCmd(args)
+	} else {
+		switch args[0] {
+		case "list":
+			keysListCmd(parseFlags(args, noFlags))
+		case "add":
+			keysAddCmd(parseFlags(args, noFlags))
+		case "remove":
+			keysRemoveCmd(parseFlags(args, noFlags))
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
 const keysHelp = `Usage: infr keys [list|add|remove] [keyfile]
 
 List, add, or remove ssh keys used for managing hosts and containers.
@@ -18,7 +35,7 @@ var keysAddFile, keysRemoveFile string
 
 func keysListCmd(args []string) {
 	if len(args) != 0 {
-		errorHelpExit("keys", "Too many arguments for 'list'.")
+		errorExit("Too many arguments for 'list'.")
 	}
 
 	fmt.Println(config.Keys)
@@ -26,7 +43,7 @@ func keysListCmd(args []string) {
 
 func keysAddCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("keys", "Wrong number of arguments for 'add'.")
+		errorExit("Wrong number of arguments for 'add'.")
 	}
 
 	newKeysBytes, err := ioutil.ReadFile(args[0])
@@ -45,7 +62,7 @@ func keysAddCmd(args []string) {
 
 func keysRemoveCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("keys", "Wrong number of arguments for 'remove'.")
+		errorExit("Wrong number of arguments for 'remove'.")
 	}
 
 	removeKeysBytes, err := ioutil.ReadFile(args[0])

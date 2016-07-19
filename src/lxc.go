@@ -38,6 +38,34 @@ type lxc struct {
 	Https       httpsAction
 }
 
+func lxcCmd(args []string) {
+	if len(args) == 0 {
+		lxcListCmd(args)
+	} else {
+		switch args[0] {
+		case "list":
+			lxcListCmd(parseFlags(args, noFlags))
+		case "add":
+			lxcAddCmd(parseFlags(args, noFlags))
+		case "remove":
+			lxcRemoveCmd(parseFlags(args, noFlags))
+		case "show":
+			lxcShowCmd(parseFlags(args, noFlags))
+		case "alias-add":
+			lxcAliasAddCmd(parseFlags(args, noFlags))
+		case "alias-remove":
+			lxcAliasRemoveCmd(parseFlags(args, noFlags))
+		case "http":
+			lxcHttpCmd(parseFlags(args, noFlags))
+		case "https":
+			lxcHttpsCmd(parseFlags(args, noFlags))
+
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
 const lxcListHelp = `[list]
 
 List all containers.
@@ -45,7 +73,7 @@ List all containers.
 
 func lxcListCmd(args []string) {
 	if len(args) != 0 {
-		errorHelpExit("lxc", "Too many arguments for 'list'.")
+		errorExit("Too many arguments for 'list'.")
 	}
 
 	for _, lxc := range config.Lxcs {
@@ -60,7 +88,7 @@ Create container called <name> running <distro> <release> on <host>.
 
 func lxcAddCmd(args []string) {
 	if len(args) != 4 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'add'.")
+		errorExit("Wrong number of arguments for 'add'.")
 	}
 
 	name := strings.ToLower(args[0])
@@ -99,7 +127,7 @@ At this stage the host is just removed from list of containers.
 
 func lxcRemoveCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'remove'.")
+		errorExit("Wrong number of arguments for 'remove'.")
 	}
 
 	name := strings.ToLower(args[0])
@@ -129,7 +157,7 @@ func lxcRemoveCmd(args []string) {
 
 func lxcShowCmd(args []string) {
 	if len(args) != 1 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'show'.")
+		errorExit("Wrong number of arguments for 'show'.")
 	}
 
 	lxc := findLxc(args[0])
@@ -168,7 +196,7 @@ func httpsActionString(a httpsAction) string {
 
 func lxcAliasAddCmd(args []string) {
 	if len(args) != 2 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'alias-add'.")
+		errorExit("Wrong number of arguments for 'alias-add'.")
 	}
 
 	lxc := findLxc(args[0])
@@ -181,7 +209,7 @@ func lxcAliasAddCmd(args []string) {
 
 func lxcAliasRemoveCmd(args []string) {
 	if len(args) != 2 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'alias-remove'.")
+		errorExit("Wrong number of arguments for 'alias-remove'.")
 	}
 
 	lxc := findLxc(args[0])
@@ -194,7 +222,7 @@ func lxcAliasRemoveCmd(args []string) {
 
 func lxcHttpCmd(args []string) {
 	if len(args) != 2 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'http'.")
+		errorExit("Wrong number of arguments for 'http'.")
 	}
 
 	lxc := findLxc(args[0])
@@ -217,7 +245,7 @@ func lxcHttpCmd(args []string) {
 
 func lxcHttpsCmd(args []string) {
 	if len(args) != 2 {
-		errorHelpExit("lxc", "Wrong number of arguments for 'https'.")
+		errorExit("Wrong number of arguments for 'https'.")
 	}
 
 	lxc := findLxc(args[0])

@@ -26,6 +26,21 @@ type dnsRecord struct {
 	Rage4Id int
 }
 
+func dnsCmd(args []string) {
+	if len(args) == 0 {
+		dnsListCmd(args)
+	} else {
+		switch args[0] {
+		case "list":
+			dnsListCmd(parseFlags(args, noFlags))
+		case "fix":
+			dnsFixCmd(parseFlags(args, noFlags))
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
 func dnsListCmd(args []string) {
 	records := dnsRecordsNeeded()
 	managed := dnsIsManaged()

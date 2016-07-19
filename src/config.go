@@ -10,6 +10,7 @@ import (
 )
 
 var workDirPath string
+var cwd string
 
 var config struct {
 	General        map[string]string
@@ -19,6 +20,21 @@ var config struct {
 	LastPreseedURL string
 }
 
+func saveCwd() {
+	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func restoreCwd() {
+	err := os.Chdir(cwd)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func loadConfig() {
 
 	if err := os.MkdirAll(workDirPath, 0700); err != nil {
@@ -26,6 +42,7 @@ func loadConfig() {
 	}
 
 	cdWorkDir()
+	defer restoreCwd()
 
 	jsonBytes, err := ioutil.ReadFile("config")
 	if err != nil {
@@ -46,6 +63,7 @@ func loadConfig() {
 
 func saveConfig() {
 	cdWorkDir()
+	defer restoreCwd()
 
 	jsonBytes, err := json.MarshalIndent(config, "", "  ")
 
