@@ -16,7 +16,7 @@ var config struct {
 	General        map[string]string
 	Keys           string
 	Hosts          []*host
-	Lxcs           []lxc
+	Lxcs           []*lxc
 	LastPreseedURL string
 }
 

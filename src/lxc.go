@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -38,7 +37,7 @@ type lxc struct {
 	Https       httpsAction
 }
 
-func lxcCmd(args []string) {
+func lxcsCmd(args []string) {
 	if len(args) == 0 {
 		lxcListCmd(args)
 	} else {
@@ -47,18 +46,36 @@ func lxcCmd(args []string) {
 			lxcListCmd(parseFlags(args, noFlags))
 		case "add":
 			lxcAddCmd(parseFlags(args, noFlags))
+		default:
+			errorExit("Invalid command: %s", args[0])
+		}
+	}
+}
+
+func lxcCmd(args []string) {
+	if len(args) < 1 {
+		errorExit("Not enough arguments for 'lxc'.")
+	}
+
+	l := findLxc(args[0])
+	args = args[1:]
+
+	if len(args) == 0 {
+		lxcShowCmd(l, args)
+	} else {
+		switch args[0] {
 		case "remove":
-			lxcRemoveCmd(parseFlags(args, noFlags))
+			lxcRemoveCmd(l, parseFlags(args, noFlags))
 		case "show":
-			lxcShowCmd(parseFlags(args, noFlags))
-		case "alias-add":
-			lxcAliasAddCmd(parseFlags(args, noFlags))
-		case "alias-remove":
-			lxcAliasRemoveCmd(parseFlags(args, noFlags))
+			lxcShowCmd(l, parseFlags(args, noFlags))
+		case "add-alias":
+			lxcAddAliasCmd(l, parseFlags(args, noFlags))
+		case "remove-alias":
+			lxcRemoveAliasCmd(l, parseFlags(args, noFlags))
 		case "http":
-			lxcHttpCmd(parseFlags(args, noFlags))
+			lxcHttpCmd(l, parseFlags(args, noFlags))
 		case "https":
-			lxcHttpsCmd(parseFlags(args, noFlags))
+			lxcHttpsCmd(l, parseFlags(args, noFlags))
 
 		default:
 			errorExit("Invalid command: %s", args[0])
@@ -73,7 +90,7 @@ List all containers.
 
 func lxcListCmd(args []string) {
 	if len(args) != 0 {
-		errorExit("Too many arguments for 'list'.")
+		errorExit("Too many arguments for 'lxcs [list]'.")
 	}
 
 	for _, lxc := range config.Lxcs {
@@ -88,7 +105,7 @@ Create container called <name> running <distro> <release> on <host>.
 
 func lxcAddCmd(args []string) {
 	if len(args) != 4 {
-		errorExit("Wrong number of arguments for 'add'.")
+		errorExit("Wrong number of arguments for 'lxcs add'.")
 	}
 
 	name := strings.ToLower(args[0])
@@ -111,7 +128,7 @@ func lxcAddCmd(args []string) {
 		Distro:      distro,
 		Release:     release}
 
-	config.Lxcs = append(config.Lxcs, newLxc)
+	config.Lxcs = append(config.Lxcs, &newLxc)
 	saveConfig()
 
 	newLxc.Create()
@@ -125,29 +142,20 @@ Remove container from cluster.
 At this stage the host is just removed from list of containers.
 `
 
-func lxcRemoveCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'remove'.")
+func lxcRemoveCmd(toRemove *lxc, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'lxc <name> remove'.")
 	}
 
-	name := strings.ToLower(args[0])
-
-	var newLxcs []lxc
-	var removed bool
+	var newLxcs []*lxc
 
 	for _, lxc := range config.Lxcs {
-		if lxc.Name != name {
+		if toRemove != lxc {
 			newLxcs = append(newLxcs, lxc)
-		} else {
-			removed = true
-			lxc.Remove()
 		}
 	}
 
-	if !removed {
-		fmt.Printf("Lxc not found: %s\n", name)
-		os.Exit(1)
-	}
+	toRemove.Remove()
 
 	config.Lxcs = newLxcs
 	saveConfig()
@@ -155,19 +163,17 @@ func lxcRemoveCmd(args []string) {
 	dnsFix()
 }
 
-func lxcShowCmd(args []string) {
-	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'show'.")
+func lxcShowCmd(l *lxc, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'lxc <name> show'.")
 	}
 
-	lxc := findLxc(args[0])
-
-	fmt.Printf("Name:     %s\n", lxc.Name)
-	fmt.Printf("Host:     %s\n", lxc.Host)
-	fmt.Printf("Distro:   %s %s\n", lxc.Distro, lxc.Release)
-	fmt.Printf("Aliases:  %s\n", strings.Join(lxc.Aliases, ", "))
-	fmt.Printf("HTTP: 	  %s\n", httpActionString(lxc.Http))
-	fmt.Printf("HTTPS:    %s\n", httpsActionString(lxc.Https))
+	fmt.Printf("Name:     %s\n", l.Name)
+	fmt.Printf("Host:     %s\n", l.Host)
+	fmt.Printf("Distro:   %s %s\n", l.Distro, l.Release)
+	fmt.Printf("Aliases:  %s\n", strings.Join(l.Aliases, ", "))
+	fmt.Printf("HTTP: 	  %s\n", httpActionString(l.Http))
+	fmt.Printf("HTTPS:    %s\n", httpsActionString(l.Https))
 }
 
 func httpActionString(a httpAction) string {
@@ -194,80 +200,76 @@ func httpsActionString(a httpsAction) string {
 	}
 }
 
-func lxcAliasAddCmd(args []string) {
-	if len(args) != 2 {
-		errorExit("Wrong number of arguments for 'alias-add'.")
+func lxcAddAliasCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> add-alias <alias>'.")
 	}
 
-	lxc := findLxc(args[0])
-	alias := strings.ToLower(args[1])
+	alias := strings.ToLower(args[0])
 
-	lxc.Aliases = uniqueStrings(append(lxc.Aliases, alias))
+	l.Aliases = uniqueStrings(append(l.Aliases, alias))
 	saveConfig()
-	lxc.FindHost().Configure()
+	l.FindHost().Configure()
 }
 
-func lxcAliasRemoveCmd(args []string) {
-	if len(args) != 2 {
-		errorExit("Wrong number of arguments for 'alias-remove'.")
+func lxcRemoveAliasCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> remove-alias <alias>'.")
 	}
 
-	lxc := findLxc(args[0])
-	alias := strings.ToLower(args[1])
+	alias := strings.ToLower(args[0])
 
-	lxc.Aliases = removeStrings(lxc.Aliases, []string{alias})
+	l.Aliases = removeStrings(l.Aliases, []string{alias})
 	saveConfig()
-	lxc.FindHost().Configure()
+	l.FindHost().Configure()
 }
 
-func lxcHttpCmd(args []string) {
-	if len(args) != 2 {
-		errorExit("Wrong number of arguments for 'http'.")
+func lxcHttpCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> http NONE|FORWARD|REDIRECT'.")
 	}
 
-	lxc := findLxc(args[0])
-	option := strings.ToUpper(args[1])
+	option := strings.ToUpper(args[0])
 
 	switch option {
 	case "NONE":
-		lxc.Http = HTTPNONE
+		l.Http = HTTPNONE
 	case "FORWARD":
-		lxc.Http = HTTPFORWARD
+		l.Http = HTTPFORWARD
 	case "REDIRECT":
-		lxc.Http = HTTPREDIRECT
+		l.Http = HTTPREDIRECT
 	default:
 		errorExit("Invalid option, please specify: NONE, FORWARD or REDIRECT")
 	}
 
 	saveConfig()
-	lxc.FindHost().Configure()
+	l.FindHost().Configure()
 }
 
-func lxcHttpsCmd(args []string) {
-	if len(args) != 2 {
-		errorExit("Wrong number of arguments for 'https'.")
+func lxcHttpsCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> https NONE|TERMINATE'.")
 	}
 
-	lxc := findLxc(args[0])
-	option := strings.ToUpper(args[1])
+	option := strings.ToUpper(args[0])
 
 	switch option {
 	case "NONE":
-		lxc.Https = HTTPSNONE
+		l.Https = HTTPSNONE
 	case "TERMINATE":
-		lxc.Https = HTTPSTERMINATE
+		l.Https = HTTPSTERMINATE
 	default:
 		errorExit("Invalid option, please specify: NONE or TERMINATE")
 	}
 
 	saveConfig()
-	lxc.FindHost().Configure()
+	l.FindHost().Configure()
 }
 
 func findLxc(name string) *lxc {
 	for i, l := range config.Lxcs {
 		if l.Name == name {
-			return &config.Lxcs[i]
+			return config.Lxcs[i]
 		}
 	}
 

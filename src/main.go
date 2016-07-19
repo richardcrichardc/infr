@@ -28,6 +28,8 @@ func main() {
 		hostsCmd(parseFlags(args, noFlags))
 	case "host":
 		hostCmd(parseFlags(args, noFlags))
+	case "lxcs":
+		lxcsCmd(parseFlags(args, noFlags))
 	case "lxc":
 		lxcCmd(parseFlags(args, noFlags))
 	case "dns":

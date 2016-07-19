@@ -230,7 +230,7 @@ func (h *host) AllLxcs() []*lxc {
 
 	for i, l := range config.Lxcs {
 		if l.Host == h.Name {
-			lxcs = append(lxcs, &config.Lxcs[i])
+			lxcs = append(lxcs, config.Lxcs[i])
 		}
 	}
 
