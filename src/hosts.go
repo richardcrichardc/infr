@@ -9,11 +9,6 @@ import (
 	"net"
 )
 
-const hostsHelp = `Usage: infr hosts [subcommand] [args]
-
-Manage hosts that containers are run on.
-`
-
 var hostsRemove bool
 var hostsAddStr, hostsAddPass string
 
@@ -77,23 +72,6 @@ func hostsListCmd(args []string) {
 	}
 }
 
-const hostsAddHelp = `add [-p root-password] <name> <target IP address>
-
-Add new host to cluster by sshing into root@<target IP address>, reformating the harddrive,
-installing and configuring new operating system and other software.
-
-THIS WILL DESTROY ALL DATA ON THE MACHINE AT <target IP address>. It is designed to be used with a
-brand new VPS containing no data, USE ON AN EXISTING MACHINE AT YOUR OWN RISK.
-
-This command uses the ssh key in $HOMEDIR/.ssh/id_rsa or the password provided by the -p flag to
-authenticate with the target host.
-
-Before using this command you need to use:
-infr keys add <keyfile> -- to specify ssh keys to be installed on new host.
-infr config set infrDomain <domain> -- to specify domain that will be appended to <name> to create hosts FQDN.
-
-`
-
 func hostsAddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&hostsAddPass, "p", "", "Optional password for sshing into host for initial install.")
 }
@@ -152,13 +130,6 @@ func hostsAddCmd(args []string) {
 	newHost.Configure()
 	dnsFix()
 }
-
-const hostsRemoveHelp = `remove <name>
-
-Remove named host from cluster.
-
-At this stage the host is just removed from list of hosts.
-`
 
 func hostsRemoveCmd(toRemove *host, args []string) {
 	if len(args) != 0 {

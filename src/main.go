@@ -34,6 +34,8 @@ func main() {
 		lxcCmd(parseFlags(args, noFlags))
 	case "dns":
 		dnsCmd(parseFlags(args, noFlags))
+	case "help":
+		helpCmd(parseFlags(args, noFlags))
 	default:
 		errorExit("Invalid command: %s", args[0])
 	}
@@ -58,5 +60,6 @@ func noFlags(flagset *flag.FlagSet) {
 func errorExit(format string, formatArgs ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, formatArgs...)
 	fmt.Fprintln(os.Stderr)
+	fmt.Fprintf(os.Stderr, "Run '%s help' to view documentation.\n", os.Args[0])
 	os.Exit(1)
 }

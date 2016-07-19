@@ -24,13 +24,6 @@ func keysCmd(args []string) {
 	}
 }
 
-const keysHelp = `Usage: infr keys [list|add|remove] [keyfile]
-
-List, add, or remove ssh keys used for managing hosts and containers.
-
-The contents of [keyfile] should be in the format of .ssh/authorized_keys.
-`
-
 var keysAddFile, keysRemoveFile string
 
 func keysListCmd(args []string) {

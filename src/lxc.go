@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-const lxcHelp = `Usage: infr con [subcommand] [args]
-
-Manage containers...
-`
-
 type httpAction int
 
 const (
