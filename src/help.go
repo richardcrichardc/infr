@@ -30,11 +30,7 @@ infr \- manage virtual hosting infrastructure
 .br
 \fBinfr\fR [\fIoptions\fR] \fBhosts\fR \fBadd\fR [\fB-p\fR \fIroot-password\fR] \fIname\fR \fItarget IP address\fR
 .br
-\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBreconfigure\fR
-.br
-\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBreinstall-software\fR
-.br
-\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBreconfigure-network\fR
+\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBreconfigure\fR [\fB-N\fR] [\fB-S\fR]
 .br
 \fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBremove\fR
 .P

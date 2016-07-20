@@ -9,9 +9,6 @@ import (
 	"net"
 )
 
-var hostsRemove bool
-var hostsAddStr, hostsAddPass string
-
 type host struct {
 	Name        string
 	PublicIPv4  string
@@ -42,14 +39,10 @@ func hostCmd(args []string) {
 	args = args[1:]
 
 	switch args[0] {
+	case "reconfigure":
+		hostsReconfigureCmd(h, parseFlags(args, hostsReconfigureFlags))
 	case "remove":
 		hostsRemoveCmd(h, parseFlags(args, noFlags))
-	case "reconfigure":
-		hostsReconfigureCmd(h, parseFlags(args, noFlags))
-	case "reinstall-software":
-		hostsReinstallSoftwareCmd(h, parseFlags(args, noFlags))
-	case "reconfigure-network":
-		hostsReconfigureNetworkCmd(h, parseFlags(args, noFlags))
 	default:
 		errorExit("Invalid command: %s", args[0])
 	}
@@ -71,6 +64,9 @@ func hostsListCmd(args []string) {
 		fmt.Printf("%-15s %-15s %-15s\n", host.Name, host.PublicIPv4, host.PrivateIPv4)
 	}
 }
+
+//   hostsAdd flags
+var hostsAddPass string
 
 func hostsAddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&hostsAddPass, "p", "", "Optional password for sshing into host for initial install.")
@@ -150,39 +146,39 @@ func hostsRemoveCmd(toRemove *host, args []string) {
 	dnsFix()
 }
 
+// hostsReconfigure Flags
+var reconfigureNetwork, reinstallSoftware bool
+
+func hostsReconfigureFlags(fs *flag.FlagSet) {
+	fs.BoolVar(&reconfigureNetwork, "N", false, "Reconfigure network on host.")
+	fs.BoolVar(&reinstallSoftware, "S", false, "Reinstall software on host.")
+}
+
 func hostsReconfigureCmd(h *host, args []string) {
 	if len(args) != 0 {
 		errorExit("Too many arguments for 'host <name> reconfigure'.")
 	}
 
-	h.Configure()
-}
-
-func hostsReinstallSoftwareCmd(h *host, args []string) {
-	if len(args) != 0 {
-		errorExit("Too many arguments for 'host <name> reinstall-software'.")
-	}
-
-	h.InstallSoftware()
-}
-
-func hostsReconfigureNetworkCmd(h *host, args []string) {
-	if len(args) != 0 {
-		errorExit("Too many arguments for 'host <name> reconfigure-network'.")
-	}
-
-	input, err := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
+	if reconfigureNetwork {
+		input, err := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
 HOST OR CONTAINERS TO REATTACH) AND IS ONLY NEEDED IF VNET IP CHANGES.
 DO YOU WANT TO CONTINUE? (type YES to confirm) `)
-	if err != nil {
-		errorExit("%s", err.Error())
+		if err != nil {
+			errorExit("%s", err.Error())
+		}
+
+		if input != "YES\n" {
+			errorExit("ABORTING")
+		}
+
+		h.ConfigureNetwork()
 	}
 
-	if input != "YES\n" {
-		errorExit("ABORTING")
+	if reinstallSoftware {
+		h.InstallSoftware()
 	}
 
-	h.ConfigureNetwork()
+	h.Configure()
 }
 
 func findHost(name string) *host {
