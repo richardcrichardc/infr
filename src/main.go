@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+//go:generate go run scripts/inliner.go
+
 func main() {
 	args := parseFlags(os.Args, setupGlobalFlags)
 	expandWorkDirPath()

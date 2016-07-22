@@ -1,0 +1,8 @@
+HTTP/1.0 404 Service Unavailable
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>404 Not Found</h1>
+No such site.
+</body></html>

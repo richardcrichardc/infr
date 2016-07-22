@@ -7,5 +7,6 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 source misc/go-env
 rm -f infr
+go generate infr
 go install infr
 mv misc/go-workspace/bin/infr .
