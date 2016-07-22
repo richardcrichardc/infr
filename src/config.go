@@ -17,6 +17,7 @@ var config struct {
 	Keys           string
 	Hosts          []*host
 	Lxcs           []*lxc
+	Backups        []*backup
 	LastPreseedURL string
 }
 

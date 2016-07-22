@@ -1,18 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"infr/easyssh"
 	"infr/evilbootstrap"
 	"infr/util"
+	"io"
 	"net"
+	"os"
+	"strings"
 )
 
 type host struct {
-	Name        string
-	PublicIPv4  string
-	PrivateIPv4 string
+	Name              string
+	PublicIPv4        string
+	PrivateIPv4       string
+	SSHKnownHostsLine string
 }
 
 func hostsCmd(args []string) {
@@ -48,14 +53,9 @@ func hostCmd(args []string) {
 	}
 }
 
-const hostsListHelp = `[list]
-
-List all hosts.
-`
-
 func hostsListCmd(args []string) {
 	if len(args) != 0 {
-		errorExit("Too many arguments for 'list'.")
+		errorExit("Too many arguments for 'hosts [list]'.")
 	}
 
 	fmt.Printf("NAME            PUBLIC IP       PRIVATE IP\n")
@@ -74,7 +74,7 @@ func hostsAddFlags(fs *flag.FlagSet) {
 
 func hostsAddCmd(args []string) {
 	if len(args) != 2 {
-		errorExit("Wrong number of arguments for 'add'.")
+		errorExit("Wrong number of arguments for 'hosts add [-p <root-password>] <name> <target IP address>'.")
 	}
 
 	name := args[0]
@@ -121,6 +121,9 @@ func hostsAddCmd(args []string) {
 		errorExit("Error whilst reinstalling target: %s", err)
 	}
 
+	newHost.retrieveHostSSHPubKey()
+	saveConfig()
+
 	newHost.ConfigureNetwork()
 	newHost.InstallSoftware()
 	newHost.Configure()
@@ -147,11 +150,13 @@ func hostsRemoveCmd(toRemove *host, args []string) {
 }
 
 // hostsReconfigure Flags
-var reconfigureNetwork, reinstallSoftware bool
+var reconfigureNetwork, reinstallSoftware, retrieveHostSSHPubKey, notReconfigureHost bool
 
 func hostsReconfigureFlags(fs *flag.FlagSet) {
-	fs.BoolVar(&reconfigureNetwork, "N", false, "Reconfigure network on host.")
-	fs.BoolVar(&reinstallSoftware, "S", false, "Reinstall software on host.")
+	fs.BoolVar(&reconfigureNetwork, "n", false, "Reconfigure network on host.")
+	fs.BoolVar(&reinstallSoftware, "s", false, "Reinstall software on host.")
+	fs.BoolVar(&retrieveHostSSHPubKey, "k", false, "Retrieve hosts ssh public key.")
+	fs.BoolVar(&notReconfigureHost, "R", false, "Don't reconfigure HAProxy etc.")
 }
 
 func hostsReconfigureCmd(h *host, args []string) {
@@ -178,7 +183,13 @@ DO YOU WANT TO CONTINUE? (type YES to confirm) `)
 		h.InstallSoftware()
 	}
 
-	h.Configure()
+	if retrieveHostSSHPubKey {
+		h.retrieveHostSSHPubKey()
+	}
+
+	if !notReconfigureHost {
+		h.Configure()
+	}
 }
 
 func findHost(name string) *host {
@@ -190,6 +201,16 @@ func findHost(name string) *host {
 
 	errorExit("Unknown host: %s", name)
 	return nil
+}
+
+func allKnownHostLines() string {
+	var out bytes.Buffer
+
+	for _, h := range config.Hosts {
+		fmt.Fprintln(&out, h.SSHKnownHostsLine)
+	}
+
+	return out.String()
 }
 
 func (h *host) AllLxcs() []*lxc {
@@ -204,22 +225,46 @@ func (h *host) AllLxcs() []*lxc {
 	return lxcs
 }
 
-func (h *host) RunScript(scriptTmpl string, data interface{}, echo, sudo bool) {
-
-	script := executeTemplate(scriptTmpl, data)
-
-	ssh := &easyssh.MakeConfig{
+func (h *host) SSHConfig() *easyssh.MakeConfig {
+	return &easyssh.MakeConfig{
 		User:   "manager",
 		Server: h.PublicIPv4,
 		Key:    "/.ssh/id_rsa",
 		Port:   "22",
 	}
+}
+
+func (h *host) RunScript(scriptTmpl string, data interface{}, echo, sudo bool) {
+
+	script := executeTemplate(scriptTmpl, data)
+
+	ssh := h.SSHConfig()
 
 	fmt.Printf("Running script on remote host: %s\n", h.Name)
 	err := ssh.RunScript(script, echo, sudo)
 	if err != nil {
 		errorExit("Error running remote script: %s", err)
 	}
+}
+
+func (h *host) RunCaptureStdout(cmd string, echo bool) string {
+	ssh := h.SSHConfig()
+
+	var stdout bytes.Buffer
+	var stderr io.Writer
+
+	if echo {
+		stderr = os.Stderr
+	}
+
+	fmt.Printf("Capturing output on remote host: %s\n", h.Name)
+	fmt.Println(cmd)
+	err := ssh.RunCapture(cmd, &stdout, stderr)
+	if err != nil {
+		errorExit("Error running remote script: %s", err)
+	}
+
+	return stdout.String()
 }
 
 func (h *host) InstallSoftware() {
@@ -238,7 +283,7 @@ echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources
 apt-get update
 
 # install various packages
-apt-get -y install lxc bridge-utils haproxy ssl-cert webfs
+apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils
 apt-get -y install certbot -t jessie-backports
 
 # create ssl directory for haproxy
@@ -394,6 +439,7 @@ func (h *host) Configure() {
 	conf := hostConfigData{
 		host:              h,
 		ZerotierNetworkId: generalConfig("vnetZerotierNetworkId"),
+		KnownHosts:        allKnownHostLines(),
 	}
 
 	h.RunScript(configureHostScript, conf, true, true)
@@ -401,9 +447,8 @@ func (h *host) Configure() {
 
 type hostConfigData struct {
 	*host
-	ZerotierNetworkId  string
-	PrivateNetwork     *net.IPNet
-	PrivateNetworkMask net.IP
+	ZerotierNetworkId string
+	KnownHosts        string
 }
 
 const configureHostScript = `
@@ -426,6 +471,10 @@ if [ -n "{{.ZerotierNetworkId}}" ]
 then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
+
+cat <<'EOF' > /etc/ssh/ssh_known_hosts
+{{.KnownHosts}}
+EOF
 
 # Configure HAProxy
 
@@ -457,7 +506,7 @@ service haproxy reload
 `
 
 func (h *host) ConfigureNetwork() {
-	conf := hostConfigData{
+	conf := hostConfigNetworkData{
 		host:               h,
 		ZerotierNetworkId:  generalConfig("vnetZerotierNetworkId"),
 		PrivateNetwork:     vnetNetwork(),
@@ -514,3 +563,13 @@ EOF
 ifdown --all
 ifup --all
 `
+
+func (h *host) retrieveHostSSHPubKey() {
+	// SSH generates several host keys using different ciphers
+	// We are retrieving the one that Debian 8 uses in 2016
+	// This may not be robust
+	pubkey := h.RunCaptureStdout("sudo cat /etc/ssh/ssh_host_ecdsa_key.pub", true)
+	fields := strings.Fields(pubkey)
+	h.SSHKnownHostsLine = fmt.Sprintf("%s,%s %s %s", h.Name+"."+needInfrDomain(), h.PublicIPv4, fields[0], fields[1])
+	saveConfig()
+}

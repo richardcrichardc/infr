@@ -34,6 +34,8 @@ func main() {
 		lxcCmd(parseFlags(args, noFlags))
 	case "dns":
 		dnsCmd(parseFlags(args, noFlags))
+	case "backups":
+		backupsCmd(parseFlags(args, noFlags))
 	case "help":
 		helpCmd(parseFlags(args, noFlags))
 	default:

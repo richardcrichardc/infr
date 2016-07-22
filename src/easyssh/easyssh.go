@@ -236,3 +236,16 @@ func (ssh_conf *MakeConfig) RunScript(script string, echo, sudo bool) error {
 
 	return session.Run(cmd)
 }
+
+func (ssh_conf *MakeConfig) RunCapture(cmd string, stdout, stderr io.Writer) error {
+	session, err := ssh_conf.connect()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	session.Stdout = stdout
+	session.Stderr = stderr
+
+	return session.Run(cmd)
+}
