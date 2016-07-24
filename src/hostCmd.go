@@ -68,7 +68,6 @@ func hostsAddCmd(args []string) {
 	publicIPv4 := args[1]
 
 	sshKeys := needKeys()
-	infrDomain := needInfrDomain()
 
 	for _, host := range config.Hosts {
 		if host.Name == name {
@@ -97,7 +96,7 @@ func hostsAddCmd(args []string) {
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
-	config.LastPreseedURL, err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain, sshKeys, config.LastPreseedURL)
+	config.LastPreseedURL, err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain(), sshKeys, config.LastPreseedURL)
 
 	// Save preseed URL if evilbootstrap got that far, even if it otherwise failed
 	if config.LastPreseedURL != "" {

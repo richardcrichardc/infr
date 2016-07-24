@@ -12,7 +12,7 @@ func (h *host) HAProxyHttpsDomains() string {
 	var fqdns []string
 
 	for _, lxc := range h.AllLxcs() {
-		fqdns = append(fqdns, lxc.Name+"."+needInfrDomain())
+		fqdns = append(fqdns, lxc.FQDN())
 		fqdns = append(fqdns, lxc.Aliases...)
 	}
 

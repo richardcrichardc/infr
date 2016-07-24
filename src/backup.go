@@ -90,7 +90,7 @@ func backupRemoveCmd(args []string) {
 func (h *host) setupBackupOf(target *host) {
 	backupData := setupBackupAgentData{
 		Target:     target.Name,
-		InfrDomain: needInfrDomain(),
+		InfrDomain: infrDomain(),
 	}
 
 	h.RunScript(setupBackupAgentScript, backupData, true, true)

@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"golang.org/x/crypto/ssh"
 	"infr/easyssh"
-
 	"io"
 	"net"
 	"os"
@@ -16,6 +16,7 @@ type host struct {
 	PublicIPv4        string
 	PrivateIPv4       string
 	SSHKnownHostsLine string
+	sshClient         *ssh.Client
 }
 
 func findHost(name string) *host {
@@ -37,6 +38,14 @@ func allKnownHostLines() string {
 	}
 
 	return out.String()
+}
+
+func (h *host) FQDN() string {
+	return h.Name + "." + infrDomain()
+}
+
+func (h *host) VnetFQDN() string {
+	return h.Name + "." + vnetDomain()
 }
 
 func (h *host) AllLxcs() []*lxc {
@@ -396,6 +405,6 @@ func (h *host) retrieveHostSSHPubKey() {
 	// This may not be robust
 	pubkey := h.RunCaptureStdout("sudo cat /etc/ssh/ssh_host_ecdsa_key.pub", true)
 	fields := strings.Fields(pubkey)
-	h.SSHKnownHostsLine = fmt.Sprintf("%s,%s %s %s", h.Name+"."+needInfrDomain(), h.PublicIPv4, fields[0], fields[1])
+	h.SSHKnownHostsLine = fmt.Sprintf("%s,%s %s %s", h.FQDN(), h.PublicIPv4, fields[0], fields[1])
 	saveConfig()
 }

@@ -77,13 +77,13 @@ func dnsFix() {
 	fixDnsRecords(records)
 }
 
-func needInfrDomain() string {
+func infrDomain() string {
 	dnsDomain := needGeneralConfig("dnsDomain")
 	dnsPrefix := needGeneralConfig("dnsPrefix")
 	return dnsPrefix + "." + dnsDomain
 }
 
-func needVnetDomain() string {
+func vnetDomain() string {
 	dnsDomain := needGeneralConfig("dnsDomain")
 	vnetPrefix := needGeneralConfig("vnetPrefix")
 	return vnetPrefix + "." + dnsDomain
@@ -94,21 +94,18 @@ func dnsIsManaged() bool {
 }
 
 func dnsRecordsNeeded() []dnsRecord {
-	infrDomain := needInfrDomain()
-	vnetDomain := needVnetDomain()
-
 	var records []dnsRecord
 
 	for _, host := range config.Hosts {
 		records = append(records, dnsRecord{
-			Name:   host.Name + "." + infrDomain,
+			Name:   host.FQDN(),
 			Type:   "A",
 			Value:  host.PublicIPv4,
 			TTL:    3600,
 			Reason: "HOST PUBLIC IP"})
 
 		records = append(records, dnsRecord{
-			Name:   host.Name + "." + vnetDomain,
+			Name:   host.VnetFQDN(),
 			Type:   "A",
 			Value:  host.PrivateIPv4,
 			TTL:    3600,
@@ -120,14 +117,14 @@ func dnsRecordsNeeded() []dnsRecord {
 		host := lxc.FindHost()
 
 		records = append(records, dnsRecord{
-			Name:   lxc.Name + "." + infrDomain,
+			Name:   lxc.FQDN(),
 			Type:   "A",
 			Value:  host.PublicIPv4,
 			TTL:    3600,
 			Reason: "LXC HOST PUBLIC IP"})
 
 		records = append(records, dnsRecord{
-			Name:   lxc.Name + "." + vnetDomain,
+			Name:   lxc.VnetFQDN(),
 			Type:   "A",
 			Value:  lxc.PrivateIPv4,
 			TTL:    3600,
@@ -156,8 +153,6 @@ func recordStatusString(v recordStatus) string {
 
 func checkDnsRecords(records []dnsRecord) []dnsRecord {
 	dnsDomain := needGeneralConfig("dnsDomain")
-	infrDomain := needInfrDomain()
-	vnetDomain := needVnetDomain()
 
 	client := rage4.NewClient(needGeneralConfig("dnsRage4Account"), needGeneralConfig("dnsRage4Key"))
 
@@ -173,7 +168,7 @@ func checkDnsRecords(records []dnsRecord) []dnsRecord {
 
 aRecLoop:
 	for _, aRec := range actualRecords {
-		if strings.HasSuffix(aRec.Name, infrDomain) || strings.HasSuffix(aRec.Name, vnetDomain) {
+		if strings.HasSuffix(aRec.Name, infrDomain()) || strings.HasSuffix(aRec.Name, vnetDomain()) {
 			for i, rec := range records {
 				if rec.Name == aRec.Name {
 					records[i].Rage4Id = aRec.Id

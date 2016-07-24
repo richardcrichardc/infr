@@ -78,11 +78,6 @@ func lxcCmd(args []string) {
 	}
 }
 
-const lxcListHelp = `[list]
-
-List all containers.
-`
-
 func lxcListCmd(args []string) {
 	if len(args) != 0 {
 		errorExit("Too many arguments for 'lxcs [list]'.")
@@ -92,11 +87,6 @@ func lxcListCmd(args []string) {
 		fmt.Printf("%-15s %-15s %-15s\n", lxc.Name, lxc.Host, lxc.PrivateIPv4)
 	}
 }
-
-const lxcAddHelp = `add <name> <distro> <release> <host>
-
-Create container called <name> running <distro> <release> on <host>.
-`
 
 func lxcAddCmd(args []string) {
 	if len(args) != 4 {
@@ -130,13 +120,6 @@ func lxcAddCmd(args []string) {
 	dnsFix()
 }
 
-const lxcRemoveHelp = `remove <name>
-
-Remove container from cluster.
-
-At this stage the host is just removed from list of containers.
-`
-
 func lxcRemoveCmd(toRemove *lxc, args []string) {
 	if len(args) != 0 {
 		errorExit("Too many arguments for 'lxc <name> remove'.")
@@ -156,6 +139,14 @@ func lxcRemoveCmd(toRemove *lxc, args []string) {
 	saveConfig()
 
 	dnsFix()
+}
+
+func (l *lxc) FQDN() string {
+	return l.Name + "." + infrDomain()
+}
+
+func (l *lxc) VnetFQDN() string {
+	return l.Name + "." + vnetDomain()
 }
 
 func lxcShowCmd(l *lxc, args []string) {
@@ -388,8 +379,4 @@ func (l *lxc) HttpsBackend() string {
 	default:
 		panic("Unexpected httpsAction")
 	}
-}
-
-func (l *lxc) FQDN() string {
-	return l.Name + "." + needInfrDomain()
 }
