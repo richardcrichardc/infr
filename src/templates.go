@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-func executeTemplate(tmplStr string, data interface{}) *bytes.Buffer {
+func executeTemplate(tmplStr string, data interface{}) string {
 	var out bytes.Buffer
 
 	tmpl := template.Must(template.New("script").Parse(tmplStr))
@@ -14,5 +14,5 @@ func executeTemplate(tmplStr string, data interface{}) *bytes.Buffer {
 		panic(err)
 	}
 
-	return &out
+	return out.String()
 }

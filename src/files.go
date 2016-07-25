@@ -1,136 +1,7 @@
 package main
 
 var files = map[string]string {
-    "ost/configure.sh": `# This script is supposed to be idempotent
-
-# Exit on error
-set -e
-
-
-# Leave zerotier networks before joining so interface comes up as zt0
-zerotier-cli listnetworks | cut -d ' ' -f 3 | while read networkId; do
-   if [ "$networkId" != "<nwid>" ]; then
-      zerotier-cli leave $networkId
-   fi
-done
-
-# Join zerotier network
-if [ -n "{{.ZerotierNetworkId}}" ]
-then
-	zerotier-cli join {{.ZerotierNetworkId}}
-fi
-
-cat <<'EOF' > /etc/ssh/ssh_known_hosts
-{{.KnownHosts}}
-EOF
-
-# Configure HAProxy
-
-cat <<'EOF' > /etc/haproxy/errors/no-backend.http
-HTTP/1.0 404 Service Unavailable
-Cache-Control: no-cache
-Connection: close
-Content-Type: text/html
-
-<html><body><h1>404 Not Found</h1>
-No such site.
-</body></html>
-
-EOF
-
-cat <<'EOF' > /etc/haproxy/haproxy.cfg
-{{.host.HAProxyCfg}}
-EOF
-
-cat <<'EOF' > /etc/haproxy/https-domains
-{{.host.HAProxyHttpsDomains}}
-EOF
-
-/etc/haproxy/issue-ssl-certs richard@tawherotech.nz
-/etc/haproxy/install-ssl-certs
-
-service haproxy reload
-`,
-
-    "ost/install-software.sh": `# This script is idempotent
-
-# echo commands and exit on error
-set -v -e
-
-# enable backports so we can install certbot
-
-echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
-apt-get update
-
-# install various packages
-apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils
-apt-get -y install certbot -t jessie-backports
-
-# create ssl directory for haproxy
-mkdir -p /etc/haproxy/ssl
-
-# create doc_root and .wellknown for certbot
-mkdir -p /etc/haproxy/certbot/.well-known
-
-
-# script for getting certbot to issue ssl certificates
-cat << EOF > /etc/haproxy/issue-ssl-certs
-#!/bin/bash
-
-cat /etc/haproxy/https-domains | while read FQDN; do
-  if [ "\$FQDN" != "" ]; then
-  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email \$1 -d \$FQDN
-  fi
-done
-EOF
-chmod +x /etc/haproxy/issue-ssl-certs
-
-
-# script for installing certs issued by certbot
-cat << EOF > /etc/haproxy/install-ssl-certs
-#!/bin/bash
-
-# remove old certs and cert list
-rm -f /etc/haproxy/ssl/*
-truncate --size=0 /etc/haproxy/ssl-crt-list
-
-# create default file used when HOST does not match any other certs
-cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
-
-cat /etc/haproxy/https-domains | while read FQDN; do
-  if [ "\$FQDN" != "" ]; then
-    LIVEDIR=/etc/letsencrypt/live/\$FQDN
-    if [ -e "\$LIVEDIR" ]; then
-        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
-        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
-        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
-    fi
-  fi
-done
-EOF
-chmod +x /etc/haproxy/install-ssl-certs
-
-
-# the certbot package has a cron job to renew certificates on a daily basis
-# here we add a daily cron job to install the renewed certificates
-ln -sf /etc/haproxy/install-ssl-certs /etc/cron.daily/install-ssl-certs
-
-# config file for webfs - web server used for hosting .web-known directory used to issue ssl certificates
-cat << EOF > /etc/webfsd.conf
-
-web_root="/etc/haproxy/certbot"
-web_ip="127.0.0.1"
-web_port="9980"
-web_user="www-data"
-web_group="www-data"
-web_extras="-j"
-EOF
-
-service webfs restart
-
-# install confedit script used by this and other scripts
-cat << EOF > /usr/local/bin/confedit
-#!/usr/bin/python3
+    "confedit": `#!/usr/bin/python3
 
 import sys
 from collections import OrderedDict
@@ -203,7 +74,51 @@ if __name__ == "__main__":
         print(e)
         exit(1)
 EOF
-chmod +x /usr/local/bin/confedit
+`,
+
+    "configure.sh": `# Exit on error
+set -e
+
+# Leave zerotier networks before joining so interface comes up as zt0
+zerotier-cli listnetworks | cut -d ' ' -f 3 | while read networkId; do
+   if [ "$networkId" != "<nwid>" ]; then
+      zerotier-cli leave $networkId
+   fi
+done
+
+# Join zerotier network
+if [ -n "{{.ZerotierNetworkId}}" ]
+then
+	zerotier-cli join {{.ZerotierNetworkId}}
+fi
+
+/etc/haproxy/issue-ssl-certs {{.AdminEmail}}
+/etc/haproxy/install-ssl-certs
+
+service haproxy reload
+`,
+
+    "install-software.sh": `# echo commands and exit on error
+set -v -e
+
+# enable backports so we can install certbot
+
+echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
+apt-get update
+
+# install various packages
+apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils
+apt-get -y install certbot -t jessie-backports
+
+# create ssl directory for haproxy
+mkdir -p /etc/haproxy/ssl
+
+# create doc_root and .wellknown for certbot
+mkdir -p /etc/haproxy/certbot/.well-known
+
+# the certbot package has a cron job to renew certificates on a daily basis
+# here we add a daily cron job to install the renewed certificates
+ln -sf /usr/local/bin/install-ssl-certs /etc/cron.daily/install-ssl-certs
 
 # enable IP forwarding so nat from private network works
 cat <<'EOF' | confedit /etc/sysctl.conf
@@ -214,7 +129,29 @@ sysctl --system
 # install zerotier one
 wget -O - https://install.zerotier.com/ | bash`,
 
-    "ost/interfaces": `# Containers lose their connection to the bridge when running this script :-(
+    "install-ssl-certs": `#!/bin/bash
+# script for installing certs issued by certbot
+
+# remove old certs and cert list
+rm -f /etc/haproxy/ssl/*
+truncate --size=0 /etc/haproxy/ssl-crt-list
+
+# create default file used when HOST does not match any other certs
+cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+    LIVEDIR=/etc/letsencrypt/live/\$FQDN
+    if [ -e "\$LIVEDIR" ]; then
+        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
+        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
+        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
+    fi
+  fi
+done
+`,
+
+    "interfaces": `# Containers lose their connection to the bridge when running this script :-(
 
 # echo commands and exit on error
 set -v -e
@@ -251,7 +188,8 @@ iface zt0 inet manual
     down brctl delif br0 ` + "`" + `zt0
 `,
 
-    "ost/issue-ssl-certs": `#!/bin/bash
+    "issue-ssl-certs": `#!/bin/bash
+# script for getting certbot to issue ssl certificates
 
 cat /etc/haproxy/https-domains | while read FQDN; do
   if [ "\$FQDN" != "" ]; then
@@ -260,7 +198,7 @@ cat /etc/haproxy/https-domains | while read FQDN; do
 done
 `,
 
-    "ost/no-backend.http": `HTTP/1.0 404 Service Unavailable
+    "no-backend.http": `HTTP/1.0 404 Service Unavailable
 Cache-Control: no-cache
 Connection: close
 Content-Type: text/html
@@ -268,6 +206,14 @@ Content-Type: text/html
 <html><body><h1>404 Not Found</h1>
 No such site.
 </body></html>
+`,
+
+    "webfsd.conf": `web_root="/etc/haproxy/certbot"
+web_ip="127.0.0.1"
+web_port="9980"
+web_user="www-data"
+web_group="www-data"
+web_extras="-j"
 `,
 
 }

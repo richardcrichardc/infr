@@ -1,4 +1,5 @@
 #!/bin/bash
+# script for getting certbot to issue ssl certificates
 
 cat /etc/haproxy/https-domains | while read FQDN; do
   if [ "\$FQDN" != "" ]; then

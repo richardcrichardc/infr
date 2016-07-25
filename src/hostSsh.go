@@ -45,16 +45,13 @@ func parsePrivateKeyFile(keypath string) (ssh.Signer, error) {
 	return key, nil
 }
 
-func (h *host) Remote(cmd string, stdinTmpl string, stdinData interface{}) {
+func (h *host) Remote(cmd string, stdin string) {
 	if h.sshClient == nil {
 		h.ConnectSSH()
 	}
 
-	var stdin *bytes.Buffer
-
-	if stdinTmpl != "" {
-		stdin = executeTemplate(stdinTmpl, stdinData)
-		logf("%s: %s <<EOF\n%s\nEOF", h.Name, cmd, stdin.String())
+	if stdin != "" {
+		logf("%s: %s <<EOF\n%s\nEOF", h.Name, cmd, stdin)
 	} else {
 		logf("%s: %s", h.Name, cmd)
 	}
@@ -64,6 +61,10 @@ func (h *host) Remote(cmd string, stdinTmpl string, stdinData interface{}) {
 		logf("Unable to create session: %s", err)
 	}
 	defer session.Close()
+
+	if stdin != "" {
+		session.Stdin = bytes.NewBufferString(stdin)
+	}
 
 	session.Stdout = log
 	session.Stderr = log
@@ -75,15 +76,23 @@ func (h *host) Remote(cmd string, stdinTmpl string, stdinData interface{}) {
 }
 
 func (h *host) Sudo(cmd string) {
-	h.Remote("sudo "+cmd, "", nil)
+	h.Remote("sudo "+cmd, "")
 }
 
 func (h *host) SudoScript(scriptTmpl string, data interface{}) {
-	h.Remote("sudo bash", scriptTmpl, data)
+	h.Remote("sudo bash", executeTemplate(scriptTmpl, data))
 }
 
-func (h *host) Upload(fileTmpl string, data interface{}, path, owner, group, mask string) {
-	h.Remote("sudo dd of="+path, fileTmpl, data)
+func (h *host) Upload(file, path string) {
+	h.Remote("sudo dd of="+path, file)
+}
+
+func (h *host) UploadChownMod(file, path, owner, group, mask string) {
+	h.Upload(file, path)
 	h.Sudo("chown " + owner + ":" + group + " " + path)
 	h.Sudo("chmod " + mask + " " + path)
+}
+
+func (h *host) UploadX(file, path string) {
+	h.UploadChownMod(file, path, "root", "root", "0555")
 }

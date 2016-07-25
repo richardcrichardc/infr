@@ -1,0 +1,20 @@
+#!/bin/bash
+# script for installing certs issued by certbot
+
+# remove old certs and cert list
+rm -f /etc/haproxy/ssl/*
+truncate --size=0 /etc/haproxy/ssl-crt-list
+
+# create default file used when HOST does not match any other certs
+cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+    LIVEDIR=/etc/letsencrypt/live/\$FQDN
+    if [ -e "\$LIVEDIR" ]; then
+        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
+        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
+        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
+    fi
+  fi
+done

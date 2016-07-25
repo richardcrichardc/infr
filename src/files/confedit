@@ -1,0 +1,73 @@
+#!/usr/bin/python3
+
+import sys
+from collections import OrderedDict
+
+
+def usage():
+    print("""Usage: confscriptedit <dest-file>
+
+Config file editor merges the config script provided on stdin into <dest-file>,
+the result is saved to <dest-file>.
+
+Config scripts consist of:
+# comments
+
+# ^^^ empty lines ^^^^, and
+key = value-pairs
+
+Merging occurs by replacing key value-pairs, matching by key, in <dest-file>
+then appending all remaining items. Items specified with a blank value are
+removed from <dest-file>. All other lines in <dest-file> are copied as is.
+""")
+    exit(1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        usage()
+
+    try:
+        # read in destfile
+        dest = sys.argv[1]
+        f = open(dest)
+        lines = f.read().splitlines()
+        f.close()
+
+        # read stdin into dict
+        changes = OrderedDict()
+        for line in sys.stdin.read().splitlines():
+            if line.strip() == "" or line[0] == "#":
+                continue
+
+            key, sep, value = line.partition("=")
+            if sep == "":
+                print("Cannot understand input:", key)
+                exit(1)
+
+            changes[key.strip()] = value.strip()
+
+        # write out original file making substitutions
+        changed = set()
+        f = open(dest, "w")
+        for line in lines:
+            key, sep, value = line.partition("=")
+            stripped_key = key.strip()
+            if sep == "" or (key and key[0] == "#") or stripped_key not in changes:
+                f.write("%s\n" % line)
+            else:
+                f.write("%s = %s\n" % (stripped_key, changes[stripped_key]))
+                changed.add(stripped_key)
+
+        # write out new config items
+        for key, value in changes.items():
+            if key not in changed:
+                f.write("%s = %s\n" % (key, value))
+
+        f.close()
+        exit(0)
+
+    except IOError as e:
+        print(e)
+        exit(1)
+EOF

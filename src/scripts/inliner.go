@@ -20,7 +20,7 @@ func main() {
 		ok(err)
 
 		if !info.IsDir() {
-			fmt.Fprintf(out, "    \"%s\": `", path[7:])
+			fmt.Fprintf(out, "    \"%s\": `", path[6:])
 
 			f, err := os.Open(path)
 			ok(err)

@@ -90,24 +90,25 @@ func (h *host) RunCaptureStdout(cmd string, echo bool) string {
 }
 
 func (h *host) InstallSoftware() {
+	h.UploadX(files["confedit"], "/usr/local/bin/confedit")
+	h.UploadX(files["issue-ssl-certs"], "/usr/local/bin/issue-ssl-certs")
+	h.UploadX(files["install-ssl-certs"], "/usr/local/bin/install-ssl-certs")
+	h.Upload(files["webfsd.conf"], "/etc/webfsd.conf")
 	h.SudoScript(files["host/install-software.sh"], nil)
-	h.Upload(files["host/issue-ssl-certs"], nil, "/usr/local/bin/issue-ssl-certs", "www-data", "list", "0543")
+	h.Upload(files["no-backend.http"], "/etc/haproxy/errors/no-backend.http")
 }
 
 func (h *host) Configure() {
-	conf := hostConfigData{
-		host:              h,
-		ZerotierNetworkId: generalConfig("vnetZerotierNetworkId"),
-		KnownHosts:        allKnownHostLines(),
+	h.Upload(allKnownHostLines(), "/etc/ssh/ssh_known_hosts")
+	h.Upload(h.HAProxyCfg(), "/etc/haproxy/haproxy.cfg")
+	h.Upload(h.HAProxyHttpsDomains(), "/etc/haproxy/https-domains")
+
+	conf := map[string]string{
+		"ZerotierNetworkId": generalConfig("vnetZerotierNetworkId"),
+		"AdminEmail": needGeneralConfig("adminEmail"),
 	}
 
-	h.SudoScript(files["host/configure.sh"], conf)
-}
-
-type hostConfigData struct {
-	*host
-	ZerotierNetworkId string
-	KnownHosts        string
+	h.SudoScript(files["configure.sh"], conf)
 }
 
 func (h *host) ConfigureNetwork() {
