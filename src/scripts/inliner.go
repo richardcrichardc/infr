@@ -9,14 +9,14 @@ import (
 )
 
 func main() {
-	out, err := os.Create("inline.go")
+	out, err := os.Create("files.go")
 	ok(err)
 
 	fmt.Fprintln(out, "package main")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "var inline = map[string]string {")
+	fmt.Fprintln(out, "var files = map[string]string {")
 
-	ok(filepath.Walk("inline", func(path string, info os.FileInfo, err error) error {
+	ok(filepath.Walk("files", func(path string, info os.FileInfo, err error) error {
 		ok(err)
 
 		if !info.IsDir() {

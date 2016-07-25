@@ -90,8 +90,8 @@ func (h *host) RunCaptureStdout(cmd string, echo bool) string {
 }
 
 func (h *host) InstallSoftware() {
-	h.SudoScript(inline["host/install-software.sh"], nil)
-	h.Upload(inline["host/issue-ssl-certs"], nil, "/usr/local/bin/issue-ssl-certs", "www-data", "list", "0543")
+	h.SudoScript(files["host/install-software.sh"], nil)
+	h.Upload(files["host/issue-ssl-certs"], nil, "/usr/local/bin/issue-ssl-certs", "www-data", "list", "0543")
 }
 
 func (h *host) Configure() {
@@ -101,7 +101,7 @@ func (h *host) Configure() {
 		KnownHosts:        allKnownHostLines(),
 	}
 
-	h.SudoScript(inline["host/configure.sh"], conf)
+	h.SudoScript(files["host/configure.sh"], conf)
 }
 
 type hostConfigData struct {

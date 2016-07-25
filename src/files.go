@@ -1,7 +1,7 @@
 package main
 
-var inline = map[string]string {
-    "host/configure.sh": `# This script is supposed to be idempotent
+var files = map[string]string {
+    "ost/configure.sh": `# This script is supposed to be idempotent
 
 # Exit on error
 set -e
@@ -52,7 +52,7 @@ EOF
 service haproxy reload
 `,
 
-    "host/install-software.sh": `# This script is idempotent
+    "ost/install-software.sh": `# This script is idempotent
 
 # echo commands and exit on error
 set -v -e
@@ -214,7 +214,7 @@ sysctl --system
 # install zerotier one
 wget -O - https://install.zerotier.com/ | bash`,
 
-    "host/interfaces": `# Containers lose their connection to the bridge when running this script :-(
+    "ost/interfaces": `# Containers lose their connection to the bridge when running this script :-(
 
 # echo commands and exit on error
 set -v -e
@@ -251,7 +251,7 @@ iface zt0 inet manual
     down brctl delif br0 ` + "`" + `zt0
 `,
 
-    "host/issue-ssl-certs": `#!/bin/bash
+    "ost/issue-ssl-certs": `#!/bin/bash
 
 cat /etc/haproxy/https-domains | while read FQDN; do
   if [ "\$FQDN" != "" ]; then
@@ -260,7 +260,7 @@ cat /etc/haproxy/https-domains | while read FQDN; do
 done
 `,
 
-    "host/no-backend.http": `HTTP/1.0 404 Service Unavailable
+    "ost/no-backend.http": `HTTP/1.0 404 Service Unavailable
 Cache-Control: no-cache
 Connection: close
 Content-Type: text/html
