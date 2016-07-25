@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email \$1 -d \$FQDN
+  fi
+done

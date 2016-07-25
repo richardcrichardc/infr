@@ -251,6 +251,15 @@ iface zt0 inet manual
     down brctl delif br0 ` + "`" + `zt0
 `,
 
+    "host/issue-ssl-certs": `#!/bin/bash
+
+cat /etc/haproxy/https-domains | while read FQDN; do
+  if [ "\$FQDN" != "" ]; then
+  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email \$1 -d \$FQDN
+  fi
+done
+`,
+
     "host/no-backend.http": `HTTP/1.0 404 Service Unavailable
 Cache-Control: no-cache
 Connection: close

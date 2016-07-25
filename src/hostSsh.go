@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"time"
@@ -44,14 +45,19 @@ func parsePrivateKeyFile(keypath string) (ssh.Signer, error) {
 	return key, nil
 }
 
-func (h *host) Sudo(cmd string) {
+func (h *host) Remote(cmd string, stdinTmpl string, stdinData interface{}) {
 	if h.sshClient == nil {
 		h.ConnectSSH()
 	}
 
-	cmd = "sudo " + cmd
+	var stdin *bytes.Buffer
 
-	logf("%s: %s", h.Name, cmd)
+	if stdinTmpl != "" {
+		stdin = executeTemplate(stdinTmpl, stdinData)
+		logf("%s: %s <<EOF\n%s\nEOF", h.Name, cmd, stdin.String())
+	} else {
+		logf("%s: %s", h.Name, cmd)
+	}
 
 	session, err := h.sshClient.NewSession()
 	if err != nil {
@@ -68,27 +74,16 @@ func (h *host) Sudo(cmd string) {
 	}
 }
 
+func (h *host) Sudo(cmd string) {
+	h.Remote("sudo "+cmd, "", nil)
+}
+
 func (h *host) SudoScript(scriptTmpl string, data interface{}) {
-	stdin := executeTemplate(scriptTmpl, data)
+	h.Remote("sudo bash", scriptTmpl, data)
+}
 
-	if h.sshClient == nil {
-		h.ConnectSSH()
-	}
-
-	logf("%s: Running script as root:\n%s\n", h.Name, stdin.String())
-
-	session, err := h.sshClient.NewSession()
-	if err != nil {
-		logf("Unable to create session: %s", err)
-	}
-	defer session.Close()
-
-	session.Stdin = stdin
-	session.Stdout = log
-	session.Stderr = log
-
-	err = session.Run("sudo bash")
-	if err != nil {
-		logf("Remote script failed: %s", err)
-	}
+func (h *host) Upload(fileTmpl string, data interface{}, path, owner, group, mask string) {
+	h.Remote("sudo dd of="+path, fileTmpl, data)
+	h.Sudo("chown " + owner + ":" + group + " " + path)
+	h.Sudo("chmod " + mask + " " + path)
 }

@@ -91,6 +91,7 @@ func (h *host) RunCaptureStdout(cmd string, echo bool) string {
 
 func (h *host) InstallSoftware() {
 	h.SudoScript(inline["host/install-software.sh"], nil)
+	h.Upload(inline["host/issue-ssl-certs"], nil, "/usr/local/bin/issue-ssl-certs", "www-data", "list", "0543")
 }
 
 func (h *host) Configure() {
