@@ -5,7 +5,7 @@ import (
 )
 
 func (h *host) HAProxyCfg() string {
-	return executeTemplate(haproxyCfgTmpl, &haproxyCfgData{host: h})
+	return executeTemplate(haproxyCfgTmpl, &haproxyCfgData{host: h}).String()
 }
 
 func (h *host) HAProxyHttpsDomains() string {

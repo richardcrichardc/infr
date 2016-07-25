@@ -25,7 +25,7 @@ func main() {
 			f, err := os.Open(path)
 			ok(err)
 
-			reader := bufio.NewReader(f)
+			reader := bufio.NewReaderSize(f, 100*1024)
 
 			for {
 				bytes, readErr := reader.ReadSlice('`')

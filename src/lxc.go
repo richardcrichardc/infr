@@ -277,7 +277,7 @@ func (l *lxc) Create() {
 		GatewayIPv4:        host.PrivateIPv4,
 		SSHKeys:            needKeys()}
 
-	host.RunScript(createLxcScript, data, true, true)
+	host.SudoScript(createLxcScript, data)
 }
 
 type lxcCreateData struct {
@@ -347,7 +347,7 @@ EOF
 
 func (l *lxc) Remove() {
 	host := findHost(l.Host)
-	host.RunScript(removeLxcScript, l, true, true)
+	host.SudoScript(removeLxcScript, l)
 }
 
 const removeLxcScript = `

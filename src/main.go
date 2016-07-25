@@ -13,8 +13,8 @@ import (
 func main() {
 	args := parseFlags(os.Args, setupGlobalFlags)
 	expandWorkDirPath()
-
 	saveCwd()
+	openLog()
 	loadConfig()
 
 	if len(args) == 0 {
@@ -59,6 +59,12 @@ func parseFlags(args []string, setupFlags func(flagset *flag.FlagSet)) []string 
 }
 
 func noFlags(flagset *flag.FlagSet) {
+}
+
+func setupGlobalFlags(flagset *flag.FlagSet) {
+	flagset.StringVar(&workDirPath, "w", "$HOME/.infr", "Workdir, where configuration and other fluff is kept")
+	flagset.StringVar(&identityFile, "i", "$HOME/.ssh/id_rsa", "SSH identity file (private key)")
+	flagset.BoolVar(&verbose, "v", false, "Output operation log to stdout")
 }
 
 func errorExit(format string, formatArgs ...interface{}) {

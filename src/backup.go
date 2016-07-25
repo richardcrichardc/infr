@@ -93,7 +93,7 @@ func (h *host) setupBackupOf(target *host) {
 		InfrDomain: infrDomain(),
 	}
 
-	h.RunScript(setupBackupAgentScript, backupData, true, true)
+	h.SudoScript(setupBackupAgentScript, backupData)
 
 	pubkey := h.RunCaptureStdout("sudo cat /var/lib/backups/.ssh/id_rsa.pub", true)
 
@@ -102,7 +102,7 @@ func (h *host) setupBackupOf(target *host) {
 		To:  h.Name,
 	}
 
-	target.RunScript(setupBackupSnapshotsScript, snapshotData, true, true)
+	target.SudoScript(setupBackupSnapshotsScript, snapshotData)
 }
 
 type setupBackupAgentData struct {
