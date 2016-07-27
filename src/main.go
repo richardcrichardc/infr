@@ -12,31 +12,38 @@ import (
 
 func main() {
 	args := parseFlags(os.Args, setupGlobalFlags)
-	expandWorkDirPath()
-	saveCwd()
-	openLog()
-	loadConfig()
-
 	if len(args) == 0 {
 		errorExit("Please specify a command.")
 	}
 
+	expandWorkDirPath()
+	saveCwd()
+	openLog()
+
 	switch args[0] {
 	case "config":
+		loadConfig()
 		configCmd(parseFlags(args, noFlags))
 	case "keys":
+		loadConfig()
 		keysCmd(parseFlags(args, noFlags))
 	case "hosts":
+		loadConfig()
 		hostsCmd(parseFlags(args, noFlags))
 	case "host":
+		loadConfig()
 		hostCmd(parseFlags(args, noFlags))
 	case "lxcs":
+		loadConfig()
 		lxcsCmd(parseFlags(args, noFlags))
 	case "lxc":
+		loadConfig()
 		lxcCmd(parseFlags(args, noFlags))
 	case "dns":
+		loadConfig()
 		dnsCmd(parseFlags(args, noFlags))
 	case "backups":
+		loadConfig()
 		backupsCmd(parseFlags(args, noFlags))
 	case "help":
 		helpCmd(parseFlags(args, noFlags))
@@ -65,6 +72,7 @@ func setupGlobalFlags(flagset *flag.FlagSet) {
 	flagset.StringVar(&workDirPath, "w", "$HOME/.infr", "Workdir, where configuration and other fluff is kept")
 	flagset.StringVar(&identityFile, "i", "$HOME/.ssh/id_rsa", "SSH identity file (private key)")
 	flagset.BoolVar(&verbose, "v", false, "Output operation log to stdout")
+	flagset.StringVar(&hostsDown, "D", "", "Comma separated list of hosts that are down")
 }
 
 func errorExit(format string, formatArgs ...interface{}) {

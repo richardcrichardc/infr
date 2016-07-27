@@ -10,7 +10,7 @@ import (
 
 var identityFile string
 
-func (h *host) ConnectSSH() {
+func (h *host) ConnectSSH() error {
 	var config ssh.ClientConfig
 
 	config.User = "manager"
@@ -25,6 +25,11 @@ func (h *host) ConnectSSH() {
 	config.Timeout = 5 * time.Second
 
 	h.sshClient, err = ssh.Dial("tcp", h.FQDN()+":22", &config)
+	return err
+}
+
+func (h *host) MustConnectSSH() {
+	err := h.ConnectSSH()
 	if err != nil {
 		errorExit("Unable to SSH to %s: %s", h.FQDN(), err)
 	}
@@ -47,10 +52,6 @@ func parsePrivateKeyFile(keypath string) (ssh.Signer, error) {
 }
 
 func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
-	if h.sshClient == nil {
-		h.ConnectSSH()
-	}
-
 	logCmd := h.Name + ": " + cmd
 
 	if stdout != nil {
@@ -115,25 +116,3 @@ func (h *host) SudoCaptureStdout(cmd string) string {
 
 	return buf.String()
 }
-
-/*
-func (h *host) RRunCaptureStdout(cmd string, echo bool) string {
-	ssh := h.SSHConfig()
-
-	var stdout bytes.Buffer
-	var stderr io.Writer
-
-	if echo {
-		stderr = os.Stderr
-	}
-
-	fmt.Printf("Capturing output on remote host: %s\n", h.Name)
-	fmt.Println(cmd)
-	err := ssh.RunCapture(cmd, &stdout, stderr)
-	if err != nil {
-		errorExit("Error running remote script: %s", err)
-	}
-
-	return stdout.String()
-}
-*/

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"golang.org/x/crypto/ssh"
-	"infr/easyssh"
 	"net"
 	"strings"
 )
@@ -15,6 +14,7 @@ type host struct {
 	PrivateIPv4       string
 	SSHKnownHostsLine string
 	sshClient         *ssh.Client
+	down              bool
 }
 
 func findHost(name string) *host {
@@ -56,15 +56,6 @@ func (h *host) AllLxcs() []*lxc {
 	}
 
 	return lxcs
-}
-
-func (h *host) SSHConfig() *easyssh.MakeConfig {
-	return &easyssh.MakeConfig{
-		User:   "manager",
-		Server: h.PublicIPv4,
-		Key:    "/.ssh/id_rsa",
-		Port:   "22",
-	}
 }
 
 func (h *host) InstallSoftware() {
