@@ -1,6 +1,101 @@
 package main
 
-var files = map[string]string {
+func files(name string) string {
+	file, ok := filesMap[name]
+	if !ok {
+		panic("No file: " + name)
+	}
+	return file
+}
+
+var filesMap = map[string]string {
+    "backup-all": `#!/bin/bash -e
+
+cd /var/lib/backups/backups
+
+LOGDIR=$(mktemp -d)
+trap "rm -fr $LOGDIR" EXIT
+
+for HOST in ` + "`" + `compgen -G '*'` + "`" + `; do
+  chronic backup-host $HOST &> $LOGDIR/$HOST &
+done
+
+wait
+
+cd $LOGDIR
+for HOST in ` + "`" + `compgen -G '*'` + "`" + `; do
+	if [ -s $HOST ]; then
+		echo Backup of $HOST failed:
+		cat $HOST
+		echo
+	fi
+done
+`,
+
+    "backup-host": `#!/bin/bash -ex
+
+if [ ! "$#" -eq 1 ];then
+	echo Usage: backup-host host
+	exit 1
+fi
+
+FROM=$1
+TO=$(hostname)
+DIR=/var/lib/backups/backups/$FROM
+FQDN=$FROM.$(cat /etc/infr-domain)
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+if [ ! -d $DIR ];then
+	echo $DIR is not a directory
+	exit 1
+fi
+
+cd $DIR
+
+(
+	if ! flock -n 9; then
+		echo Backup of $FROM already in progress
+		exit 1
+	fi
+
+	LAST=$(ls | tail -n 1)
+
+	# create a new remote snapshot
+	ssh backup_user@$FQDN -C "cd snapshots-for; mkdir -p $TO; cd $TO; sudo btrfs subvolume snapshot -r / $TIMESTAMP"
+
+	# handle errors ourselves
+	set +e
+
+	# copy the snapshot to this host
+	ssh -C backup_user@$FQDN "cd snapshots-for/$TO; sudo backup-send $TIMESTAMP $LAST" | sudo btrfs receive .
+
+	RESULT=$?
+
+	# Exit on error
+	set -e
+
+	# btrfs receive does not clean up after itself when an error occurs
+	if [ ! $RESULT -eq 0 ]; then
+	    sudo btrfs subvolume delete $TIMESTAMP
+	    exit
+	fi
+
+	# delete all but the last remote snapshot
+	ssh backup_user@$FQDN -C "cd snapshots-for/$TO; ls -r | tail -n+2 | xargs -r chronic sudo btrfs subvolume delete"
+) 9>.lockfile
+`,
+
+    "backup-send": `#!/bin/bash
+
+SNAPSHOT=$1
+PREV=$2
+
+if [ ! -e "$PREV" ]; then
+	btrfs send $SNAPSHOT | cat
+else
+	btrfs send -p $PREV $SNAPSHOT | cat
+fi`,
+
     "confedit": `#!/usr/bin/python3
 
 import sys
@@ -98,6 +193,13 @@ fi
 service haproxy reload
 `,
 
+    "infr-backup": `SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+*/5 * * * * backup_user backup-all
+`,
+
     "install-software.sh": `# echo commands and exit on error
 set -v -e
 
@@ -127,7 +229,23 @@ EOF
 sysctl --system
 
 # install zerotier one
-wget -O - https://install.zerotier.com/ | bash`,
+wget -O - https://install.zerotier.com/ | bash
+
+# create backup user and directories
+if ! grep -q backup_user /etc/passwd; then
+	adduser --system --home /var/lib/backups --no-create-home --shell /bin/bash --ingroup sudo backup_user
+fi
+
+mkdir -p /var/lib/backups
+mkdir -p /var/lib/backups/backups
+mkdir -p /var/lib/backups/archive
+mkdir -p /var/lib/backups/snapshots-for
+chown backup_user:nogroup /var/lib/backups /var/lib/backups/backups /var/lib/backups/snapshots-for
+
+if [ ! -e "/var/lib/backups/.ssh/id_rsa" ]; then
+	sudo -u backup_user ssh-keygen -q -N '' -f /var/lib/backups/.ssh/id_rsa
+fi
+`,
 
     "install-ssl-certs": `#!/bin/bash
 # script for installing certs issued by certbot
@@ -151,13 +269,7 @@ cat /etc/haproxy/https-domains | while read FQDN; do
 done
 `,
 
-    "interfaces": `# Containers lose their connection to the bridge when running this script :-(
-
-# echo commands and exit on error
-set -v -e
-
-cat <<'EOF' > /etc/network/interfaces
-# AUTOMATICALLY GENERATED - DO NOT EDIT
+    "interfaces": `# AUTOMATICALLY GENERATED - DO NOT EDIT
 
 # This file describes the network interfaces available on your system
 # and how to activate them. For more information, see interfaces(5).

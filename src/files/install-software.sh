@@ -28,3 +28,18 @@ sysctl --system
 
 # install zerotier one
 wget -O - https://install.zerotier.com/ | bash
+
+# create backup user and directories
+if ! grep -q backup_user /etc/passwd; then
+	adduser --system --home /var/lib/backups --no-create-home --shell /bin/bash --ingroup sudo backup_user
+fi
+
+mkdir -p /var/lib/backups
+mkdir -p /var/lib/backups/backups
+mkdir -p /var/lib/backups/archive
+mkdir -p /var/lib/backups/snapshots-for
+chown backup_user:nogroup /var/lib/backups /var/lib/backups/backups /var/lib/backups/snapshots-for
+
+if [ ! -e "/var/lib/backups/.ssh/id_rsa" ]; then
+	sudo -u backup_user ssh-keygen -q -N '' -f /var/lib/backups/.ssh/id_rsa
+fi

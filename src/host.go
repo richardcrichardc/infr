@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"infr/easyssh"
-	"io"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -69,33 +67,20 @@ func (h *host) SSHConfig() *easyssh.MakeConfig {
 	}
 }
 
-func (h *host) RunCaptureStdout(cmd string, echo bool) string {
-	ssh := h.SSHConfig()
-
-	var stdout bytes.Buffer
-	var stderr io.Writer
-
-	if echo {
-		stderr = os.Stderr
-	}
-
-	fmt.Printf("Capturing output on remote host: %s\n", h.Name)
-	fmt.Println(cmd)
-	err := ssh.RunCapture(cmd, &stdout, stderr)
-	if err != nil {
-		errorExit("Error running remote script: %s", err)
-	}
-
-	return stdout.String()
-}
-
 func (h *host) InstallSoftware() {
-	h.UploadX(files["confedit"], "/usr/local/bin/confedit")
-	h.UploadX(files["issue-ssl-certs"], "/usr/local/bin/issue-ssl-certs")
-	h.UploadX(files["install-ssl-certs"], "/usr/local/bin/install-ssl-certs")
-	h.Upload(files["webfsd.conf"], "/etc/webfsd.conf")
-	h.SudoScript(files["host/install-software.sh"], nil)
-	h.Upload(files["no-backend.http"], "/etc/haproxy/errors/no-backend.http")
+	h.SudoScript(files("install-software.sh"), nil)
+	h.UploadX(files("confedit"), "/usr/local/bin/confedit")
+	h.UploadX(files("issue-ssl-certs"), "/usr/local/bin/issue-ssl-certs")
+	h.UploadX(files("install-ssl-certs"), "/usr/local/bin/install-ssl-certs")
+	h.UploadX(files("backup-host"), "/usr/local/bin/backup-host")
+	h.UploadX(files("backup-all"), "/usr/local/bin/backup-all")
+	h.UploadX(files("backup-send"), "/usr/local/bin/backup-send")
+	h.Upload(files("no-backend.http"), "/etc/haproxy/errors/no-backend.http")
+	h.Upload(infrDomain(), "/etc/infr-domain")
+	h.Upload(files("infr-backup"), "/etc/cron.d/infr-backup")
+
+	h.Upload(files("webfsd.conf"), "/etc/webfsd.conf")
+	h.Sudo("service webfs restart")
 }
 
 func (h *host) Configure() {
@@ -105,76 +90,33 @@ func (h *host) Configure() {
 
 	conf := map[string]string{
 		"ZerotierNetworkId": generalConfig("vnetZerotierNetworkId"),
-		"AdminEmail": needGeneralConfig("adminEmail"),
+		"AdminEmail":        needGeneralConfig("adminEmail"),
 	}
 
-	h.SudoScript(files["configure.sh"], conf)
+	h.SudoScript(files("configure.sh"), conf)
 }
 
 func (h *host) ConfigureNetwork() {
 	conf := hostConfigNetworkData{
 		host:               h,
-		ZerotierNetworkId:  generalConfig("vnetZerotierNetworkId"),
 		PrivateNetwork:     vnetNetwork(),
 		PrivateNetworkMask: net.IP(vnetNetwork().Mask)}
 
-	h.SudoScript(configureHostNetworkScript, conf)
+	h.Upload(executeTemplate(files("interfaces"), conf), "/etc/network/interfaces")
+	h.Sudo("ifdown --all && ifup --all")
 }
 
 type hostConfigNetworkData struct {
 	*host
-	ZerotierNetworkId  string
 	PrivateNetwork     *net.IPNet
 	PrivateNetworkMask net.IP
 }
-
-const configureHostNetworkScript = `
-# Containers lose their connection to the bridge when running this script :-(
-
-# echo commands and exit on error
-set -v -e
-
-cat <<'EOF' > /etc/network/interfaces
-# AUTOMATICALLY GENERATED - DO NOT EDIT
-
-# This file describes the network interfaces available on your system
-# and how to activate them. For more information, see interfaces(5).
-
-source /etc/network/interfaces.d/*
-
-# The loopback network interface
-auto lo
-iface lo inet loopback
-
-# The primary network interface
-auto eth0
-allow-hotplug eth0
-iface eth0 inet dhcp
-
-auto br0
-iface br0 inet static
-    bridge_ports none
-    address {{.PrivateIPv4}}
-    netmask {{.PrivateNetworkMask}}
-    up iptables -t nat -A POSTROUTING -s {{.PrivateNetwork}} -o eth0 -j MASQUERADE
-    down iptables -t nat -D POSTROUTING -s {{.PrivateNetwork}} -o eth0 -j MASQUERADE
-
-auto zt0
-allow-hotplug zt0
-iface zt0 inet manual
-    up brctl addif br0 zt0
-    down brctl delif br0 zt0
-EOF
-
-ifdown --all
-ifup --all
-`
 
 func (h *host) retrieveHostSSHPubKey() {
 	// SSH generates several host keys using different ciphers
 	// We are retrieving the one that Debian 8 uses in 2016
 	// This may not be robust
-	pubkey := h.RunCaptureStdout("sudo cat /etc/ssh/ssh_host_ecdsa_key.pub", true)
+	pubkey := h.SudoCaptureStdout("cat /etc/ssh/ssh_host_ecdsa_key.pub")
 	fields := strings.Fields(pubkey)
 	h.SSHKnownHostsLine = fmt.Sprintf("%s,%s %s %s", h.FQDN(), h.PublicIPv4, fields[0], fields[1])
 	saveConfig()

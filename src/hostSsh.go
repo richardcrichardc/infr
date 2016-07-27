@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"io/ioutil"
 	"time"
 )
@@ -45,16 +46,22 @@ func parsePrivateKeyFile(keypath string) (ssh.Signer, error) {
 	return key, nil
 }
 
-func (h *host) Remote(cmd string, stdin string) {
+func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
 	if h.sshClient == nil {
 		h.ConnectSSH()
 	}
 
-	if stdin != "" {
-		logf("%s: %s <<EOF\n%s\nEOF", h.Name, cmd, stdin)
-	} else {
-		logf("%s: %s", h.Name, cmd)
+	logCmd := h.Name + ": " + cmd
+
+	if stdout != nil {
+		logCmd = logCmd + " > LOCAL"
 	}
+
+	if stdin != "" {
+		logCmd = logCmd + " <<EOF\n" + stdin + "\nEOF"
+	}
+
+	logf("%s", logCmd)
 
 	session, err := h.sshClient.NewSession()
 	if err != nil {
@@ -66,25 +73,29 @@ func (h *host) Remote(cmd string, stdin string) {
 		session.Stdin = bytes.NewBufferString(stdin)
 	}
 
-	session.Stdout = log
+	if stdout != nil {
+		session.Stdout = stdout
+	} else {
+		session.Stdout = log
+	}
 	session.Stderr = log
 
 	err = session.Run(cmd)
 	if err != nil {
-		logf("Remote command failed: %s", err)
+		errorExit("Remote command failed: %s", err)
 	}
 }
 
 func (h *host) Sudo(cmd string) {
-	h.Remote("sudo "+cmd, "")
+	h.Remote("sudo bash -c '"+cmd+"'", "", nil)
 }
 
 func (h *host) SudoScript(scriptTmpl string, data interface{}) {
-	h.Remote("sudo bash", executeTemplate(scriptTmpl, data))
+	h.Remote("sudo bash", executeTemplate(scriptTmpl, data), nil)
 }
 
 func (h *host) Upload(file, path string) {
-	h.Remote("sudo dd of="+path, file)
+	h.Remote("sudo dd of="+path, file, nil)
 }
 
 func (h *host) UploadChownMod(file, path, owner, group, mask string) {
@@ -96,3 +107,33 @@ func (h *host) UploadChownMod(file, path, owner, group, mask string) {
 func (h *host) UploadX(file, path string) {
 	h.UploadChownMod(file, path, "root", "root", "0555")
 }
+
+func (h *host) SudoCaptureStdout(cmd string) string {
+	var buf bytes.Buffer
+
+	h.Remote("sudo bash -c '"+cmd+"'", "", &buf)
+
+	return buf.String()
+}
+
+/*
+func (h *host) RRunCaptureStdout(cmd string, echo bool) string {
+	ssh := h.SSHConfig()
+
+	var stdout bytes.Buffer
+	var stderr io.Writer
+
+	if echo {
+		stderr = os.Stderr
+	}
+
+	fmt.Printf("Capturing output on remote host: %s\n", h.Name)
+	fmt.Println(cmd)
+	err := ssh.RunCapture(cmd, &stdout, stderr)
+	if err != nil {
+		errorExit("Error running remote script: %s", err)
+	}
+
+	return stdout.String()
+}
+*/

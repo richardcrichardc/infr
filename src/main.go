@@ -69,7 +69,6 @@ func setupGlobalFlags(flagset *flag.FlagSet) {
 
 func errorExit(format string, formatArgs ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, formatArgs...)
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintf(os.Stderr, "Run '%s help' to view documentation.\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "\n\nRun '%s help' to view documentation. Remote command log can be found in %s/log. \n", os.Args[0], workDirPath)
 	os.Exit(1)
 }

@@ -14,7 +14,15 @@ func main() {
 
 	fmt.Fprintln(out, "package main")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "var files = map[string]string {")
+	fmt.Fprintln(out, `func files(name string) string {
+	file, ok := filesMap[name]
+	if !ok {
+		panic("No file: " + name)
+	}
+	return file
+}
+
+var filesMap = map[string]string {`)
 
 	ok(filepath.Walk("files", func(path string, info os.FileInfo, err error) error {
 		ok(err)

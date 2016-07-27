@@ -1,0 +1,51 @@
+#!/bin/bash -ex
+
+if [ ! "$#" -eq 1 ];then
+	echo Usage: backup-host host
+	exit 1
+fi
+
+FROM=$1
+TO=$(hostname)
+DIR=/var/lib/backups/backups/$FROM
+FQDN=$FROM.$(cat /etc/infr-domain)
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+if [ ! -d $DIR ];then
+	echo $DIR is not a directory
+	exit 1
+fi
+
+cd $DIR
+
+(
+	if ! flock -n 9; then
+		echo Backup of $FROM already in progress
+		exit 1
+	fi
+
+	LAST=$(ls | tail -n 1)
+
+	# create a new remote snapshot
+	ssh backup_user@$FQDN -C "cd snapshots-for; mkdir -p $TO; cd $TO; sudo btrfs subvolume snapshot -r / $TIMESTAMP"
+
+	# handle errors ourselves
+	set +e
+
+	# copy the snapshot to this host
+	ssh -C backup_user@$FQDN "cd snapshots-for/$TO; sudo backup-send $TIMESTAMP $LAST" | sudo btrfs receive .
+
+	RESULT=$?
+
+	# Exit on error
+	set -e
+
+	# btrfs receive does not clean up after itself when an error occurs
+	if [ ! $RESULT -eq 0 ]; then
+	    sudo btrfs subvolume delete $TIMESTAMP
+	    exit
+	fi
+
+	# delete all but the last remote snapshot
+	ssh backup_user@$FQDN -C "cd snapshots-for/$TO; ls -r | tail -n+2 | xargs -r chronic sudo btrfs subvolume delete"
+) 9>.lockfile

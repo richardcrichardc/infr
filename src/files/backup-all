@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+cd /var/lib/backups/backups
+
+LOGDIR=$(mktemp -d)
+trap "rm -fr $LOGDIR" EXIT
+
+for HOST in `compgen -G '*'`; do
+  chronic backup-host $HOST &> $LOGDIR/$HOST &
+done
+
+wait
+
+cd $LOGDIR
+for HOST in `compgen -G '*'`; do
+	if [ -s $HOST ]; then
+		echo Backup of $HOST failed:
+		cat $HOST
+		echo
+	fi
+done

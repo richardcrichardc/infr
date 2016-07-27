@@ -1,9 +1,3 @@
-# Containers lose their connection to the bridge when running this script :-(
-
-# echo commands and exit on error
-set -v -e
-
-cat <<'EOF' > /etc/network/interfaces
 # AUTOMATICALLY GENERATED - DO NOT EDIT
 
 # This file describes the network interfaces available on your system

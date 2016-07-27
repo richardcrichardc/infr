@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SNAPSHOT=$1
+PREV=$2
+
+if [ ! -e "$PREV" ]; then
+	btrfs send $SNAPSHOT | cat
+else
+	btrfs send -p $PREV $SNAPSHOT | cat
+fi
