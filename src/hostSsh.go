@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -32,6 +34,64 @@ func (h *host) MustConnectSSH() {
 	err := h.ConnectSSH()
 	if err != nil {
 		errorExit("Unable to SSH to %s: %s", h.FQDN(), err)
+	}
+	if !h.Lock() {
+		errorExit("%s is locked. Wait for the existing operation to complete.", h.Name)
+	}
+}
+
+func (h *host) Lock() bool {
+	session, err := h.sshClient.NewSession()
+	h.lockCheckErr(err)
+
+	// Run script on remote host to do a flock and report back on success
+	// The remote script then sleeps forever, and we leave the session open
+	// So the lock is retained until we disconnect or exit
+
+	// We may not have uploaded scripts to the remote host so we stream the script into Python
+	// It gets a little complicated...
+
+	// We need a TTY so the remote process will die when we disconnect
+	err = session.RequestPty("xterm", 80, 40, ssh.TerminalModes{ssh.ECHO: 0})
+	h.lockCheckErr(err)
+
+	// Cannot pipe script directly into Python because python runs the REPL when directly
+	// attached to a TTY
+	cmd := "bash -c 'cat | python3'"
+
+	// Need to add a CMD-D to designate EOF
+	session.Stdin = bytes.NewBufferString(files("lock-host") + "\x04")
+
+	// Collect all output to a buffered reader
+	stdout, err := session.StdoutPipe()
+	h.lockCheckErr(err)
+	stderr, err := session.StderrPipe()
+	h.lockCheckErr(err)
+	out := bufio.NewReader(io.MultiReader(stdout, stderr))
+
+	// Set it all in motion
+	session.Start(cmd)
+
+	// Read first line of output
+	line, err := out.ReadString('\n')
+	line = strings.TrimSpace(line)
+
+	if line == "LOCKED" {
+		return true
+	} else if line == "ALREADY LOCKED" {
+		return false
+	}
+
+	// Unexpected output log it all
+	logf("Unexpected output when locking %s:\n%s\n", h.Name, line)
+	out.WriteTo(log)
+	errorExit("Unexpected behaviour when trying to lock host: %s", h.Name)
+	return false
+}
+
+func (h *host) lockCheckErr(err error) {
+	if err != nil {
+		errorExit("Unable to lock host %s: %s", h.Name, err)
 	}
 }
 
@@ -67,6 +127,7 @@ func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
 	session, err := h.sshClient.NewSession()
 	if err != nil {
 		logf("Unable to create session: %s", err)
+		errorExit("Remote command failed")
 	}
 	defer session.Close()
 
@@ -83,7 +144,8 @@ func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
 
 	err = session.Run(cmd)
 	if err != nil {
-		errorExit("Remote command failed: %s", err)
+		logf("Run failed: %s", err)
+		errorExit("Remote command failed")
 	}
 }
 

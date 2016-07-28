@@ -310,6 +310,45 @@ cat /etc/haproxy/https-domains | while read FQDN; do
 done
 `,
 
+    "lock-host": `#!/usr/bin/python3
+
+import fcntl, time
+
+f = open("/tmp/infr-host-lock", "w")
+try:
+    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    print("ALREADY LOCKED")
+    exit(1)
+
+print("LOCKED")
+
+while True:
+    time.sleep(365*24*3600)
+`,
+
+    "lock-host2": `cat | python3 <<EOF
+
+echo hi
+
+import fcntl, time
+
+f = open("/tmp/infr-host-lock", "w")
+try:
+    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    print("ALREADY LOCKED")
+    exit(1)
+
+print("LOCKED")
+
+while True:
+    time.sleep(365*24*3600)
+EOF
+
+echo bye
+`,
+
     "no-backend.http": `HTTP/1.0 404 Service Unavailable
 Cache-Control: no-cache
 Connection: close

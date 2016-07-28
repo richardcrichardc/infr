@@ -125,8 +125,8 @@ func saveConfig() {
 	for _, h := range config.Hosts {
 		go func(h *host) {
 			if h.down {
-				if h.ConnectSSH() != nil {
-					fmt.Println("Unable to save config to ", h.Name)
+				if h.ConnectSSH() != nil || !h.Lock() {
+					fmt.Println("Unable to save config to", h.Name)
 					c <- true
 					return
 				}
