@@ -49,7 +49,12 @@ infr \- manage virtual hosting infrastructure
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBTERMINATE\fR
 .br
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\fR
+.P
+\fBinfr\fR [\fIoptions\fR] \fBbackups\fR [\fBlist\fR]
 .br
+\fBinfr\fR [\fIoptions\fR] \fBbackups\fR \fBstart\fR \fIfrom-host\fR \fIto-host\fR
+.br
+\fBinfr\fR [\fIoptions\fR] \fBbackups\fR \fBstop\fR \fIfrom-host\fR \fIto-host\fR
 .P
 \fBinfr\fR [\fIoptions\fR] \fBconfig\fR [\fBshow\fR [\fIname\fR]]
 .br

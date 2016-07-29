@@ -1,4 +1,13 @@
 #!/bin/bash -ex
+# Perform a backup of remote host by:
+#  * sshing in,
+#  * taking a btrfs snapshot
+#  * pipeing snapshot back using btrfs send
+#  * saving snapshot locally using btrfs receive
+#  * removing earlier snapshots
+#
+# Various assumptions are made about where snapshots etc are kept
+# other scripts set up \directories and ssh access required for this script to work
 
 if [ ! "$#" -eq 1 ];then
 	echo Usage: backup-host host

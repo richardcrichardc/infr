@@ -16,10 +16,10 @@ func backupsCmd(args []string) {
 		switch args[0] {
 		case "list":
 			backupListCmd(parseFlags(args, noFlags))
-		case "add":
-			backupAddCmd(parseFlags(args, hostsAddFlags))
-		case "remove":
-			backupRemoveCmd(parseFlags(args, hostsAddFlags))
+		case "start":
+			backupStartCmd(parseFlags(args, hostsAddFlags))
+		case "stop":
+			backupStopCmd(parseFlags(args, hostsAddFlags))
 		default:
 			errorExit("Invalid command: backup %s", args[0])
 		}
@@ -38,7 +38,7 @@ func backupListCmd(args []string) {
 	}
 }
 
-func backupAddCmd(args []string) {
+func backupStartCmd(args []string) {
 	if len(args) != 2 {
 		errorExit("Wrong number of arguments for 'backups add <from host> <to host>")
 	}
@@ -64,7 +64,7 @@ func backupAddCmd(args []string) {
 	fromHost.startBackupTo(toHost)
 }
 
-func backupRemoveCmd(args []string) {
+func backupStopCmd(args []string) {
 	if len(args) != 2 {
 		errorExit("Wrong number of arguments for 'backups remove <from host> <to host>")
 	}
@@ -91,20 +91,25 @@ func backupRemoveCmd(args []string) {
 }
 
 func (fromHost *host) startBackupTo(toHost *host) {
+	// Make sure backup_user on to-host can ssh into from-host
 	pubkey := toHost.SudoCaptureStdout("cat /var/lib/backups/.ssh/id_rsa.pub")
-
 	fromHost.SudoScript(`
 if ! grep -Fxq '{{.}}' /var/lib/backups/.ssh/authorized_keys; then
 	echo '{{.}}' >> /var/lib/backups/.ssh/authorized_keys
 fi`, pubkey)
 
+	// Create (or restore) directory for from-host
+	// Scripts installed in host.INstalSoftware will now start performing backups
 	toHost.Sudo("cd /var/lib/backups/backups/; mv ../archive/" + fromHost.Name + " . || mkdir -p " + fromHost.Name)
 	toHost.Sudo("chown backup_user:nogroup /var/lib/backups/backups/" + fromHost.Name)
 }
 
 func (fromHost *host) stopBackupTo(toHost *host) {
+	// Move the backup directory on to-host into archive directory
+	// Backups will stop being performed
 	toHost.Sudo("mv /var/lib/backups/backups/" + fromHost.Name + " /var/lib/backups/archive")
 
+	// Remove scanpshots on from-host
 	fromHost.SudoScript(`
 cd /var/lib/backups/snapshots-for
 

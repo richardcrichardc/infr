@@ -1,4 +1,8 @@
 #!/bin/bash -e
+#
+# Backup all hosts which have a directory in the top level backup directory
+# Backups are performed in paralled and any (error) output is combined for reporting
+# This script is periodically run by a cron job
 
 cd /var/lib/backups/backups
 

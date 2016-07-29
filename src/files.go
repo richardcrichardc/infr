@@ -10,6 +10,10 @@ func files(name string) string {
 
 var filesMap = map[string]string {
     "backup-all": `#!/bin/bash -e
+#
+# Backup all hosts which have a directory in the top level backup directory
+# Backups are performed in paralled and any (error) output is combined for reporting
+# This script is periodically run by a cron job
 
 cd /var/lib/backups/backups
 
@@ -33,6 +37,15 @@ done
 `,
 
     "backup-host": `#!/bin/bash -ex
+# Perform a backup of remote host by:
+#  * sshing in,
+#  * taking a btrfs snapshot
+#  * pipeing snapshot back using btrfs send
+#  * saving snapshot locally using btrfs receive
+#  * removing earlier snapshots
+#
+# Various assumptions are made about where snapshots etc are kept
+# other scripts set up \directories and ssh access required for this script to work
 
 if [ ! "$#" -eq 1 ];then
 	echo Usage: backup-host host
@@ -86,6 +99,14 @@ cd $DIR
 `,
 
     "backup-send": `#!/bin/bash
+# A wrapper around btrfs send
+# Performs an incremental send if both from-snapshot and to-snapshot are presend
+# otherwise perform a full send of to-snapshot
+
+if [ ! "$#" -eq 2 ];then
+	echo Usage: backup-send from-snapshot to-snapshot
+	exit 1
+fi
 
 SNAPSHOT=$1
 PREV=$2
@@ -95,6 +116,81 @@ if [ ! -e "$PREV" ]; then
 else
 	btrfs send -p $PREV $SNAPSHOT | cat
 fi`,
+
+    "backups-to-cull": `#!/usr/bin/python3
+
+import sys
+from collections import OrderedDict
+
+
+def usage():
+    print("""Usage: confscriptedit <dest-file>
+
+Config file editor merges the config script provided on stdin into <dest-file>,
+the result is saved to <dest-file>.
+
+Config scripts consist of:
+# comments
+
+# ^^^ empty lines ^^^^, and
+key = value-pairs
+
+Merging occurs by replacing key value-pairs, matching by key, in <dest-file>
+then appending all remaining items. Items specified with a blank value are
+removed from <dest-file>. All other lines in <dest-file> are copied as is.
+""")
+    exit(1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        usage()
+
+    try:
+        # read in destfile
+        dest = sys.argv[1]
+        f = open(dest)
+        lines = f.read().splitlines()
+        f.close()
+
+        # read stdin into dict
+        changes = OrderedDict()
+        for line in sys.stdin.read().splitlines():
+            if line.strip() == "" or line[0] == "#":
+                continue
+
+            key, sep, value = line.partition("=")
+            if sep == "":
+                print("Cannot understand input:", key)
+                exit(1)
+
+            changes[key.strip()] = value.strip()
+
+        # write out original file making substitutions
+        changed = set()
+        f = open(dest, "w")
+        for line in lines:
+            key, sep, value = line.partition("=")
+            stripped_key = key.strip()
+            if sep == "" or (key and key[0] == "#") or stripped_key not in changes:
+                f.write("%s\n" % line)
+            else:
+                f.write("%s = %s\n" % (stripped_key, changes[stripped_key]))
+                changed.add(stripped_key)
+
+        # write out new config items
+        for key, value in changes.items():
+            if key not in changed:
+                f.write("%s = %s\n" % (key, value))
+
+        f.close()
+        exit(0)
+
+    except IOError as e:
+        print(e)
+        exit(1)
+EOF
+`,
 
     "confedit": `#!/usr/bin/python3
 
@@ -168,7 +264,7 @@ if __name__ == "__main__":
     except IOError as e:
         print(e)
         exit(1)
-EOF
+
 `,
 
     "configure.sh": `# Exit on error
@@ -325,28 +421,6 @@ print("LOCKED")
 
 while True:
     time.sleep(365*24*3600)
-`,
-
-    "lock-host2": `cat | python3 <<EOF
-
-echo hi
-
-import fcntl, time
-
-f = open("/tmp/infr-host-lock", "w")
-try:
-    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except BlockingIOError:
-    print("ALREADY LOCKED")
-    exit(1)
-
-print("LOCKED")
-
-while True:
-    time.sleep(365*24*3600)
-EOF
-
-echo bye
 `,
 
     "no-backend.http": `HTTP/1.0 404 Service Unavailable
