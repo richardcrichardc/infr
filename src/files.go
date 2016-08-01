@@ -123,6 +123,14 @@ fi`,
 
     "backups-to-cull": `#!/usr/bin/python3
 
+# Determine what backups to keep
+#  * All in the last 2 hours
+#  * Hourlies for the last 2 days
+#  * Dailies for the last 2 weeks
+#  * Weeklies for the last 12 weeks
+#
+# Pipe dates into stdin, dates to remove are written to stdout
+
 import sys
 from datetime import datetime, timedelta
 
@@ -314,13 +322,18 @@ MAILTO=root
     "install-software.sh": `# echo commands and exit on error
 set -v -e
 
-# enable backports so we can install certbot
+# stop apt-get prompting for input
+export DEBIAN_FRONTEND=noninteractive
 
+# enable backports so we can install certbot
 echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
 apt-get update
 
+# remove exim
+apt-get purge exim4 exim4-base exim4-config exim4-daemon-light
+
 # install various packages
-apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils
+apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils nullmailer
 apt-get -y install certbot -t jessie-backports
 
 # create ssl directory for haproxy

@@ -90,7 +90,7 @@ func loadConfig2(configBytes []byte) {
 	if !bytes.Equal(configBytes, remoteConfigBytes) {
 		// Remote configs match each other but differ from local config, someone else has changed something.
 		// Reload remote configs in case another host has been added (this is the uncommon worst case and can be optimised)
-		fmt.Println("Remote config differs, realoading in case hosts have been added")
+		fmt.Println("Remote config differs, reloading in case hosts have been added")
 
 		for _, h := range config.Hosts {
 			if h.sshClient != nil {

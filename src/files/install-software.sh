@@ -1,13 +1,18 @@
 # echo commands and exit on error
 set -v -e
 
-# enable backports so we can install certbot
+# stop apt-get prompting for input
+export DEBIAN_FRONTEND=noninteractive
 
+# enable backports so we can install certbot
 echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
 apt-get update
 
+# remove exim
+apt-get purge exim4 exim4-base exim4-config exim4-daemon-light
+
 # install various packages
-apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils
+apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils nullmailer
 apt-get -y install certbot -t jessie-backports
 
 # create ssl directory for haproxy

@@ -73,6 +73,10 @@ func (h *host) InstallSoftware() {
 
 	h.Upload(files("webfsd.conf"), "/etc/webfsd.conf")
 	h.Sudo("service webfs restart")
+
+	h.Upload(h.FQDN(), "/etc/mailname")
+	h.Upload(needGeneralConfig("adminEmail"), "/etc/nullmailer/adminaddr")
+	h.Upload(generalConfig("smtpRemote"), "/etc/nullmailer/remotes")
 }
 
 func (h *host) Configure() {
