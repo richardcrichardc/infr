@@ -125,7 +125,10 @@ func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
 	logf("%s", logCmd)
 
 	session, err := h.sshClient.NewSession()
-	remoteCheckErr(err)
+	if err != nil {
+		logf("Unable to create session: %s", err)
+		errorExit("Remote command failed")
+	}
 	defer session.Close()
 
 	if stdin != "" {
@@ -139,17 +142,9 @@ func (h *host) Remote(cmd string, stdin string, stdout io.Writer) {
 	}
 	session.Stderr = log
 
-	// We need a TTY so the remote process will die when we disconnect
-	err = session.RequestPty("xterm", 80, 40, ssh.TerminalModes{ssh.ECHO: 0})
-	remoteCheckErr(err)
-
 	err = session.Run(cmd)
-	remoteCheckErr(err)
-}
-
-func remoteCheckErr(err error) {
 	if err != nil {
-		logf("Remote command failed: %s", err)
+		logf("Run failed: %s", err)
 		errorExit("Remote command failed")
 	}
 }
