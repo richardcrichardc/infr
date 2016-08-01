@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+# Determine what backups to keep
+#  * All in the last 2 hours
+#  * Hourlies for the last 2 days
+#  * Dailies for the last 2 weeks
+#  * Weeklies for the last 12 weeks
+#
+# Pipe dates into stdin, dates to remove are written to stdout
+
+import sys
+from datetime import datetime, timedelta
+
+date_format = "%Y-%m-%dT%H:%M:%S"
+
+
+def testDates():
+    dates = [datetime.now() - timedelta(minutes=m) for m in range(0, 2000, 5)] +\
+        [datetime.now() - timedelta(days=d) for d in range(1, 200)]
+
+    return [d.strftime(date_format) for d in dates]
+
+
+def parseDates(dateStrings):
+    dates = []
+
+    for s in dateStrings:
+        try:
+            dates.append(datetime.strptime(s.strip(), date_format))
+        except ValueError:
+            print("Invalid date: %s" % s, file=sys.stderr)
+            exit(1)
+
+    return dates
+
+
+def printDates(dates):
+    for d in dates:
+        print(d.strftime(date_format))
+
+
+def keep_interval(dates, latest, interval, far_back):
+    keep = []
+    no_diff = timedelta(seconds=0)
+
+    ideal = latest.replace(minute=0, second=0)
+    earliest = ideal - far_back
+    while ideal > earliest:
+        best = None
+        best_diff = timedelta(days=1000000)
+        for d in dates:
+            diff = d - ideal
+            if diff > no_diff and diff < best_diff:
+                best = d
+                best_diff = diff
+        keep.append(best)
+        ideal -= interval
+
+    return keep
+
+
+def to_keep(dates):
+    keep = set()
+
+    if dates == []:
+        return keep
+
+    # Retension is based on the latest backup time rather than current time
+    dates = sorted(dates)
+    latest = dates[-1]
+    earliest = dates[-1]
+
+    # Keep all within last 2 hours
+    hour_ago = latest - timedelta(hours=2)
+    keep.update([d for d in dates if d > hour_ago])
+
+    # Keep hourlies for last 2 days
+    keep.update(keep_interval(dates, latest.replace(minute=0, second=0), timedelta(hours=1), timedelta(days=2)))
+
+    # Keep dailies for last 2 weeks
+    keep.update(keep_interval(dates, latest.replace(hour=0, minute=0, second=0), timedelta(days=1), timedelta(days=14)))
+
+    # Keep weeklies for last 12 weeks
+    week_starts = latest.replace(hour=0, minute=0, second=0) - timedelta(days=latest.weekday())
+    keep.update(keep_interval(dates, week_starts, timedelta(days=7), timedelta(days=7*12)))
+
+    return keep
+
+if __name__ == "__main__":
+    dates = parseDates(sys.stdin.readlines())
+    cull = sorted(set(dates) - to_keep(dates))
+    printDates(cull)

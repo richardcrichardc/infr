@@ -95,6 +95,10 @@ cd $DIR
 
 	# delete all but the last remote snapshot
 	ssh backup_user@$FQDN -C "cd snapshots-for/$TO; ls -r | tail -n+2 | xargs -r chronic sudo btrfs subvolume delete"
+
+	# delete old backups
+	ls | backups-to-cull| xargs -r chronic sudo btrfs subvolume delete
+
 ) 9>.lockfile
 `,
 
@@ -120,76 +124,87 @@ fi`,
     "backups-to-cull": `#!/usr/bin/python3
 
 import sys
-from collections import OrderedDict
+from datetime import datetime, timedelta
+
+date_format = "%Y-%m-%dT%H:%M:%S"
 
 
-def usage():
-    print("""Usage: confscriptedit <dest-file>
+def testDates():
+    dates = [datetime.now() - timedelta(minutes=m) for m in range(0, 2000, 5)] +\
+        [datetime.now() - timedelta(days=d) for d in range(1, 200)]
 
-Config file editor merges the config script provided on stdin into <dest-file>,
-the result is saved to <dest-file>.
+    return [d.strftime(date_format) for d in dates]
 
-Config scripts consist of:
-# comments
 
-# ^^^ empty lines ^^^^, and
-key = value-pairs
+def parseDates(dateStrings):
+    dates = []
 
-Merging occurs by replacing key value-pairs, matching by key, in <dest-file>
-then appending all remaining items. Items specified with a blank value are
-removed from <dest-file>. All other lines in <dest-file> are copied as is.
-""")
-    exit(1)
+    for s in dateStrings:
+        try:
+            dates.append(datetime.strptime(s.strip(), date_format))
+        except ValueError:
+            print("Invalid date: %s" % s, file=sys.stderr)
+            exit(1)
 
+    return dates
+
+
+def printDates(dates):
+    for d in dates:
+        print(d.strftime(date_format))
+
+
+def keep_interval(dates, latest, interval, far_back):
+    keep = []
+    no_diff = timedelta(seconds=0)
+
+    ideal = latest.replace(minute=0, second=0)
+    earliest = ideal - far_back
+    while ideal > earliest:
+        best = None
+        best_diff = timedelta(days=1000000)
+        for d in dates:
+            diff = d - ideal
+            if diff > no_diff and diff < best_diff:
+                best = d
+                best_diff = diff
+        keep.append(best)
+        ideal -= interval
+
+    return keep
+
+
+def to_keep(dates):
+    keep = set()
+
+    if dates == []:
+        return keep
+
+    # Retension is based on the latest backup time rather than current time
+    dates = sorted(dates)
+    latest = dates[-1]
+    earliest = dates[-1]
+
+    # Keep all within last 2 hours
+    hour_ago = latest - timedelta(hours=2)
+    keep.update([d for d in dates if d > hour_ago])
+
+    # Keep hourlies for last 2 days
+    keep.update(keep_interval(dates, latest.replace(minute=0, second=0), timedelta(hours=1), timedelta(days=2)))
+
+    # Keep dailies for last 2 weeks
+    keep.update(keep_interval(dates, latest.replace(hour=0, minute=0, second=0), timedelta(days=1), timedelta(days=14)))
+
+    # Keep weeklies for last 12 weeks
+    week_starts = latest.replace(hour=0, minute=0, second=0) - timedelta(days=latest.weekday())
+    keep.update(keep_interval(dates, week_starts, timedelta(days=7), timedelta(days=7*12)))
+
+    return keep
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        usage()
-
-    try:
-        # read in destfile
-        dest = sys.argv[1]
-        f = open(dest)
-        lines = f.read().splitlines()
-        f.close()
-
-        # read stdin into dict
-        changes = OrderedDict()
-        for line in sys.stdin.read().splitlines():
-            if line.strip() == "" or line[0] == "#":
-                continue
-
-            key, sep, value = line.partition("=")
-            if sep == "":
-                print("Cannot understand input:", key)
-                exit(1)
-
-            changes[key.strip()] = value.strip()
-
-        # write out original file making substitutions
-        changed = set()
-        f = open(dest, "w")
-        for line in lines:
-            key, sep, value = line.partition("=")
-            stripped_key = key.strip()
-            if sep == "" or (key and key[0] == "#") or stripped_key not in changes:
-                f.write("%s\n" % line)
-            else:
-                f.write("%s = %s\n" % (stripped_key, changes[stripped_key]))
-                changed.add(stripped_key)
-
-        # write out new config items
-        for key, value in changes.items():
-            if key not in changed:
-                f.write("%s = %s\n" % (key, value))
-
-        f.close()
-        exit(0)
-
-    except IOError as e:
-        print(e)
-        exit(1)
-EOF
+    dates = parseDates(sys.stdin.readlines())
+    cull = sorted(set(dates) - to_keep(dates))
+    printDates(cull)
 `,
 
     "confedit": `#!/usr/bin/python3

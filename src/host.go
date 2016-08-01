@@ -66,6 +66,7 @@ func (h *host) InstallSoftware() {
 	h.UploadX(files("backup-host"), "/usr/local/bin/backup-host")
 	h.UploadX(files("backup-all"), "/usr/local/bin/backup-all")
 	h.UploadX(files("backup-send"), "/usr/local/bin/backup-send")
+	h.UploadX(files("backups-to-cull"), "/usr/local/bin/backups-to-cull")
 	h.Upload(files("no-backend.http"), "/etc/haproxy/errors/no-backend.http")
 	h.Upload(infrDomain(), "/etc/infr-domain")
 	h.Upload(files("infr-backup"), "/etc/cron.d/infr-backup")
