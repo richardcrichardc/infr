@@ -14,7 +14,7 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
-/etc/haproxy/issue-ssl-certs {{.AdminEmail}}
-/etc/haproxy/install-ssl-certs
+issue-ssl-certs {{.AdminEmail}}
+install-ssl-certs
 
 service haproxy reload

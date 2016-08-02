@@ -9,12 +9,12 @@ truncate --size=0 /etc/haproxy/ssl-crt-list
 cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
 
 cat /etc/haproxy/https-domains | while read FQDN; do
-  if [ "\$FQDN" != "" ]; then
-    LIVEDIR=/etc/letsencrypt/live/\$FQDN
-    if [ -e "\$LIVEDIR" ]; then
-        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
-        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
-        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
+  if [ "$FQDN" != "" ]; then
+    LIVEDIR=/etc/letsencrypt/live/$FQDN
+    if [ -e "$LIVEDIR" ]; then
+        CERTFILE=/etc/haproxy/ssl/$FQDN.crt
+        echo $CERTFILE >> /etc/haproxy/ssl-crt-list
+        cat $LIVEDIR/fullchain.pem $LIVEDIR/privkey.pem  > $CERTFILE
     fi
   fi
 done
