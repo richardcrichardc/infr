@@ -1,11 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/python2
 
 import fcntl, time
 
 f = open("/tmp/infr-host-lock", "w")
 try:
     fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except BlockingIOError:
+except IOError:
     print("ALREADY LOCKED")
     exit(1)
 

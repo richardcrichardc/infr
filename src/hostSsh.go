@@ -57,7 +57,7 @@ func (h *host) Lock() bool {
 
 	// Cannot pipe script directly into Python because python runs the REPL when directly
 	// attached to a TTY
-	cmd := "bash -c 'cat | python3'"
+	cmd := "bash -c 'cat | python2'"
 
 	// Need to add a CMD-D to designate EOF
 	session.Stdin = bytes.NewBufferString(files("lock-host") + "\x04")
