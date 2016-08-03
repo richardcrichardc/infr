@@ -306,8 +306,8 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
-/etc/haproxy/issue-ssl-certs {{.AdminEmail}}
-/etc/haproxy/install-ssl-certs
+issue-ssl-certs {{.AdminEmail}}
+install-ssl-certs
 
 service haproxy reload
 `,
@@ -320,7 +320,7 @@ MAILTO=root
 `,
 
     "install-software.sh": `# echo commands and exit on error
-set -v -e
+set -x -e
 
 # stop apt-get prompting for input
 export DEBIAN_FRONTEND=noninteractive
@@ -330,7 +330,7 @@ echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources
 apt-get update
 
 # remove exim
-apt-get purge exim4 exim4-base exim4-config exim4-daemon-light
+apt-get -y purge exim4 exim4-base exim4-config exim4-daemon-light
 
 # install various packages
 apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils nullmailer
@@ -382,12 +382,12 @@ truncate --size=0 /etc/haproxy/ssl-crt-list
 cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
 
 cat /etc/haproxy/https-domains | while read FQDN; do
-  if [ "\$FQDN" != "" ]; then
-    LIVEDIR=/etc/letsencrypt/live/\$FQDN
-    if [ -e "\$LIVEDIR" ]; then
-        CERTFILE=/etc/haproxy/ssl/\$FQDN.crt
-        echo \$CERTFILE >> /etc/haproxy/ssl-crt-list
-        cat \$LIVEDIR/fullchain.pem \$LIVEDIR/privkey.pem  > \$CERTFILE
+  if [ "$FQDN" != "" ]; then
+    LIVEDIR=/etc/letsencrypt/live/$FQDN
+    if [ -e "$LIVEDIR" ]; then
+        CERTFILE=/etc/haproxy/ssl/$FQDN.crt
+        echo $CERTFILE >> /etc/haproxy/ssl-crt-list
+        cat $LIVEDIR/fullchain.pem $LIVEDIR/privkey.pem  > $CERTFILE
     fi
   fi
 done
@@ -428,20 +428,20 @@ iface zt0 inet manual
 # script for getting certbot to issue ssl certificates
 
 cat /etc/haproxy/https-domains | while read FQDN; do
-  if [ "\$FQDN" != "" ]; then
-  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email \$1 -d \$FQDN
+  if [ "$FQDN" != "" ]; then
+  	certbot certonly --webroot --quiet --keep --agree-tos --webroot-path /etc/haproxy/certbot --email $1 -d $FQDN
   fi
 done
 `,
 
-    "lock-host": `#!/usr/bin/python3
+    "lock-host": `#!/usr/bin/python2
 
 import fcntl, time
 
 f = open("/tmp/infr-host-lock", "w")
 try:
     fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except BlockingIOError:
+except IOError:
     print("ALREADY LOCKED")
     exit(1)
 

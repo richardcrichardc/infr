@@ -98,10 +98,17 @@ func loadConfig2(configBytes []byte) {
 			}
 		}
 		loadConfig2(remoteConfigBytes)
+
+		// Save localy to avoid reload if action does not save
+		saveConf(false, false)
 	}
 }
 
 func saveConfig() {
+	saveConf(true, true)
+}
+
+func saveConf(saveToHosts, saveToDownHosts bool) {
 	cdWorkDir()
 	defer restoreCwd()
 
@@ -117,6 +124,10 @@ func saveConfig() {
 		errorExit("Error in saveConfig: %s", err)
 	}
 
+	if !saveToHosts {
+		return
+	}
+
 	// Save copy of config on all hosts
 	jsonStr := string(jsonBytes)
 	c := make(chan bool)
@@ -125,6 +136,11 @@ func saveConfig() {
 	for _, h := range config.Hosts {
 		go func(h *host) {
 			if h.down {
+				if !saveToDownHosts {
+					c <- true
+					return
+				}
+
 				if h.ConnectSSH() != nil || !h.Lock() {
 					fmt.Println("Unable to save config to", h.Name)
 					c <- true

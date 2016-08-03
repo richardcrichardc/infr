@@ -59,7 +59,7 @@ func (h *host) AllLxcs() []*lxc {
 }
 
 func (h *host) InstallSoftware() {
-	h.SudoScript(files("install-software.sh"), nil)
+	h.Upload(infrDomain(), "/etc/infr-domain")
 	h.UploadX(files("confedit"), "/usr/local/bin/confedit")
 	h.UploadX(files("issue-ssl-certs"), "/usr/local/bin/issue-ssl-certs")
 	h.UploadX(files("install-ssl-certs"), "/usr/local/bin/install-ssl-certs")
@@ -67,13 +67,14 @@ func (h *host) InstallSoftware() {
 	h.UploadX(files("backup-all"), "/usr/local/bin/backup-all")
 	h.UploadX(files("backup-send"), "/usr/local/bin/backup-send")
 	h.UploadX(files("backups-to-cull"), "/usr/local/bin/backups-to-cull")
-	h.Upload(files("no-backend.http"), "/etc/haproxy/errors/no-backend.http")
-	h.Upload(infrDomain(), "/etc/infr-domain")
 	h.Upload(files("infr-backup"), "/etc/cron.d/infr-backup")
 
+	h.SudoScript(files("install-software.sh"), nil)
+
+	// These must be run after packages have installed
+	h.Upload(files("no-backend.http"), "/etc/haproxy/errors/no-backend.http")
 	h.Upload(files("webfsd.conf"), "/etc/webfsd.conf")
 	h.Sudo("service webfs restart")
-
 	h.Upload(h.FQDN(), "/etc/mailname")
 	h.Upload(needGeneralConfig("adminEmail"), "/etc/nullmailer/adminaddr")
 	h.Upload(generalConfig("smtpRemote"), "/etc/nullmailer/remotes")

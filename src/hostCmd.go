@@ -75,10 +75,11 @@ func hostsAddCmd(args []string) {
 		}
 	}
 
-	newHost := host{
+	newHost := &host{
 		Name:        name,
 		PublicIPv4:  publicIPv4,
 		PrivateIPv4: vnetGetIP(),
+		down:        true,
 	}
 
 	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + publicIPv4 + "? (type YES to confirm) ")
@@ -90,28 +91,41 @@ func hostsAddCmd(args []string) {
 		errorExit("ABORTING")
 	}
 
-	config.Hosts = append(config.Hosts, &newHost)
-	saveConfig()
+	// Save host to config - it will be down until evil bootstrap completes
+	config.Hosts = append(config.Hosts, newHost)
+	saveConf(true, false)
+
+	// Drop lock from hosts so ther work can be done in the mean time
+	for _, h := range config.Hosts {
+		h.Disconnect()
+	}
 
 	// evil bootstrap does a git checkout of ipxe in cwd, workdir is a good place for it
 	cdWorkDir()
 
 	config.LastPreseedURL, err = evilbootstrap.Install(publicIPv4, hostsAddPass, name, infrDomain(), sshKeys, config.LastPreseedURL)
 
+	// Reload config in case it has changed
+	// mark newhost as down incase it case bootstrap did not succeed
+	hostsDown += "," + newHost.Name
+	loadConfig()
+
 	// Save preseed URL if evilbootstrap got that far, even if it otherwise failed
 	if config.LastPreseedURL != "" {
-		saveConfig()
+		saveConf(true, false)
 	}
 
 	if err != nil {
 		errorExit("Error whilst reinstalling target: %s", err)
 	}
 
+	newHost = findHost(newHost.Name)
+	newHost.MustConnectSSH()
 	newHost.retrieveHostSSHPubKey()
 	saveConfig()
 
-	newHost.ConfigureNetwork()
 	newHost.InstallSoftware()
+	newHost.ConfigureNetwork()
 	newHost.Configure()
 	dnsFix()
 }

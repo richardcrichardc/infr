@@ -1,5 +1,5 @@
 # echo commands and exit on error
-set -v -e
+set -x -e
 
 # stop apt-get prompting for input
 export DEBIAN_FRONTEND=noninteractive
@@ -9,7 +9,7 @@ echo "deb http://ftp.debian.org/debian jessie-backports main" > /etc/apt/sources
 apt-get update
 
 # remove exim
-apt-get purge exim4 exim4-base exim4-config exim4-daemon-light
+apt-get -y purge exim4 exim4-base exim4-config exim4-daemon-light
 
 # install various packages
 apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils nullmailer

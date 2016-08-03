@@ -26,7 +26,12 @@ func (h *host) ConnectSSH() error {
 
 	config.Timeout = 5 * time.Second
 
-	h.sshClient, err = ssh.Dial("tcp", h.FQDN()+":22", &config)
+	h.sshClient, err = ssh.Dial("tcp", h.PublicIPv4+":22", &config)
+
+	if err == nil {
+		h.down = false
+	}
+
 	return err
 }
 
@@ -92,6 +97,13 @@ func (h *host) Lock() bool {
 func (h *host) lockCheckErr(err error) {
 	if err != nil {
 		errorExit("Unable to lock host %s: %s", h.Name, err)
+	}
+}
+
+func (h *host) Disconnect() {
+	if h.sshClient != nil {
+		h.sshClient.Close()
+		h.sshClient = nil
 	}
 }
 
