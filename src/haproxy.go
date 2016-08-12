@@ -89,7 +89,7 @@ frontend https
 
 {{ range .host.AllLxcs -}}
 backend {{.Name}}_http
-        server {{.Name}} {{.PrivateIPv4}}:80
+        server {{.Name}} {{.PrivateIPv4}}:{{.HttpPort}}
 
 {{ end }}
 

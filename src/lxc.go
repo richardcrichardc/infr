@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +31,7 @@ type lxc struct {
 	Aliases     []string
 	Http        httpAction
 	Https       httpsAction
+	HttpPort    int
 }
 
 func lxcsCmd(args []string) {
@@ -71,6 +73,8 @@ func lxcCmd(args []string) {
 			lxcHttpCmd(l, parseFlags(args, noFlags))
 		case "https":
 			lxcHttpsCmd(l, parseFlags(args, noFlags))
+		case "http-port":
+			lxcHttpPortCmd(l, parseFlags(args, noFlags))
 
 		default:
 			errorExit("Invalid command: %s", args[0])
@@ -111,7 +115,8 @@ func lxcAddCmd(args []string) {
 		Host:        hostname,
 		PrivateIPv4: vnetGetIP(),
 		Distro:      distro,
-		Release:     release}
+		Release:     release,
+		HttpPort:    80}
 
 	config.Lxcs = append(config.Lxcs, &newLxc)
 	saveConfig()
@@ -154,12 +159,13 @@ func lxcShowCmd(l *lxc, args []string) {
 		errorExit("Too many arguments for 'lxc <name> show'.")
 	}
 
-	fmt.Printf("Name:     %s\n", l.Name)
-	fmt.Printf("Host:     %s\n", l.Host)
-	fmt.Printf("Distro:   %s %s\n", l.Distro, l.Release)
-	fmt.Printf("Aliases:  %s\n", strings.Join(l.Aliases, ", "))
-	fmt.Printf("HTTP: 	  %s\n", httpActionString(l.Http))
-	fmt.Printf("HTTPS:    %s\n", httpsActionString(l.Https))
+	fmt.Printf("Name:          %s\n", l.Name)
+	fmt.Printf("Host:          %s\n", l.Host)
+	fmt.Printf("Distro:        %s %s\n", l.Distro, l.Release)
+	fmt.Printf("Aliases:       %s\n", strings.Join(l.Aliases, ", "))
+	fmt.Printf("HTTP: 	       %s\n", httpActionString(l.Http))
+	fmt.Printf("HTTPS:         %s\n", httpsActionString(l.Https))
+	fmt.Printf("LXC Http Port: %d\n", l.HttpPort)
 }
 
 func httpActionString(a httpAction) string {
@@ -247,6 +253,23 @@ func lxcHttpsCmd(l *lxc, args []string) {
 	default:
 		errorExit("Invalid option, please specify: NONE or TERMINATE")
 	}
+
+	saveConfig()
+	l.FindHost().Configure()
+}
+
+func lxcHttpPortCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> http-port <port-number>'.")
+	}
+
+	port, _ := strconv.Atoi(args[0]) // returns 0 or maxint on parse error
+
+	if port < 1 || port > 65535 {
+		errorExit("Invalid port, please specify a integer between 1 and 65535.")
+	}
+
+	l.HttpPort = port
 
 	saveConfig()
 	l.FindHost().Configure()
