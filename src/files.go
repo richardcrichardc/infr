@@ -332,6 +332,9 @@ apt-get update
 # remove exim
 apt-get -y purge exim4 exim4-base exim4-config exim4-daemon-light
 
+# remove portmap
+apt-get -y purge rpcbind
+
 # install various packages
 apt-get -y install lxc bridge-utils haproxy ssl-cert webfs btrfs-tools moreutils nullmailer
 apt-get -y install certbot -t jessie-backports

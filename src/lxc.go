@@ -22,6 +22,11 @@ const (
 	HTTPSTERMINATE
 )
 
+type tcpForward struct {
+	HostPort int
+	LxcPort  int
+}
+
 type lxc struct {
 	Name        string
 	Host        string
@@ -32,6 +37,7 @@ type lxc struct {
 	Http        httpAction
 	Https       httpsAction
 	HttpPort    int
+	TCPForwards []*tcpForward
 }
 
 func lxcsCmd(args []string) {
@@ -75,6 +81,10 @@ func lxcCmd(args []string) {
 			lxcHttpsCmd(l, parseFlags(args, noFlags))
 		case "http-port":
 			lxcHttpPortCmd(l, parseFlags(args, noFlags))
+		case "add-tcp-forward":
+			lxcAddTcpForwardCmd(l, parseFlags(args, noFlags))
+		case "remove-tcp-forward":
+			lxcRemoveTcpForwardCmd(l, parseFlags(args, noFlags))
 
 		default:
 			errorExit("Invalid command: %s", args[0])
@@ -154,6 +164,16 @@ func (l *lxc) VnetFQDN() string {
 	return l.Name + "." + vnetDomain()
 }
 
+func (l *lxc) TCPForwardsString() string {
+	var rules []string
+
+	for _, rule := range l.TCPForwards {
+		rules = append(rules, fmt.Sprintf("%d=>%d", rule.HostPort, rule.LxcPort))
+	}
+
+	return strings.Join(rules, ", ")
+}
+
 func lxcShowCmd(l *lxc, args []string) {
 	if len(args) != 0 {
 		errorExit("Too many arguments for 'lxc <name> show'.")
@@ -166,6 +186,7 @@ func lxcShowCmd(l *lxc, args []string) {
 	fmt.Printf("HTTP: 	       %s\n", httpActionString(l.Http))
 	fmt.Printf("HTTPS:         %s\n", httpsActionString(l.Https))
 	fmt.Printf("LXC Http Port: %d\n", l.HttpPort)
+	fmt.Printf("TCP Forwards:  %s\n", l.TCPForwardsString())
 }
 
 func httpActionString(a httpAction) string {
@@ -260,19 +281,88 @@ func lxcHttpsCmd(l *lxc, args []string) {
 
 func lxcHttpPortCmd(l *lxc, args []string) {
 	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'lxc <name> http-port <port-number>'.")
+		errorExit("Wrong number of arguments for 'lxc <name> http-port <port>'.")
 	}
 
 	port, _ := strconv.Atoi(args[0]) // returns 0 or maxint on parse error
 
 	if port < 1 || port > 65535 {
-		errorExit("Invalid port, please specify a integer between 1 and 65535.")
+		errorExit("Invalid port, please specify an integer between 1 and 65535.")
 	}
 
 	l.HttpPort = port
 
 	saveConfig()
 	l.FindHost().Configure()
+}
+
+func lxcAddTcpForwardCmd(l *lxc, args []string) {
+	if len(args) != 2 {
+		errorExit("Wrong number of arguments for 'lxc <name> add-tcp-forward <host-port> <lxc-port>'.")
+	}
+
+	rule := &tcpForward{}
+
+	rule.HostPort, _ = strconv.Atoi(args[0]) // returns 0 or maxint on parse error
+	rule.LxcPort, _ = strconv.Atoi(args[1])  // returns 0 or maxint on parse error
+
+	if rule.HostPort < 1 || rule.HostPort > 65535 || rule.LxcPort < 1 || rule.LxcPort > 65535 {
+		errorExit("Invalid port, please specify integers between 1 and 65535.")
+	}
+
+	if rule.HostPort == 22 || rule.HostPort == 80 || rule.HostPort == 443 {
+		errorExit("Port %d on the host is reserved for use by the host.", rule.HostPort)
+	}
+
+	h := l.FindHost()
+
+	for _, otherLxc := range h.AllLxcs() {
+		for _, otherRule := range otherLxc.TCPForwards {
+			if rule.HostPort == otherRule.HostPort {
+				errorExit("Port %d on %s is already being forwarded to the lxc %s.", rule.HostPort, h.Name, otherLxc.Name)
+			}
+		}
+	}
+
+	l.TCPForwards = append(l.TCPForwards, rule)
+
+	saveConfig()
+	h.Configure()
+}
+
+func lxcRemoveTcpForwardCmd(l *lxc, args []string) {
+	if len(args) != 2 {
+		errorExit("Wrong number of arguments for 'lxc <name> remove-tcp-forward <host-port> <lxc-port>'.")
+	}
+
+	rule := tcpForward{}
+
+	rule.HostPort, _ = strconv.Atoi(args[0]) // returns 0 or maxint on parse error
+	rule.LxcPort, _ = strconv.Atoi(args[1])  // returns 0 or maxint on parse error
+
+	if rule.HostPort < 1 || rule.HostPort > 65535 || rule.LxcPort < 1 || rule.LxcPort > 65535 {
+		errorExit("Invalid port, please specify integers between 1 and 65535.")
+	}
+
+	var newForwards []*tcpForward
+	found := false
+	for _, otherRule := range l.TCPForwards {
+		if rule != *otherRule {
+			newForwards = append(newForwards, otherRule)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		errorExit("There is no forwarding rule %d=>%d on %s.", rule.HostPort, rule.LxcPort, l.Name)
+	}
+
+	l.TCPForwards = newForwards
+
+	saveConfig()
+	h := l.FindHost()
+	h.Configure()
 }
 
 func findLxc(name string) *lxc {

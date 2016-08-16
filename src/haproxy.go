@@ -69,12 +69,12 @@ frontend http
         use_backend certbot if { path_beg /.well-known/ }
 
 {{ range .host.AllLxcs -}}
-	{{- if .HttpBackend }}
+    {{- if .HttpBackend }}
         use_backend {{.HttpBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
-	{{- end -}}
+    {{- end -}}
 {{- end }}
 
-		default_backend no_backend
+        default_backend no_backend
 
 
 frontend https
@@ -87,11 +87,21 @@ frontend https
     {{- end -}}
 {{- end }}
 
-{{ range .host.AllLxcs -}}
+{{ range .host.AllLxcs }}
 backend {{.Name}}_http
         server {{.Name}} {{.PrivateIPv4}}:{{.HttpPort}}
-
 {{ end }}
+
+{{ $host := .host -}}
+{{ range .host.AllLxcs -}}
+    {{- $lxc := . -}}
+    {{- range .TCPForwards }}
+listen forward_{{$host.Name}}:{{.HostPort}}_{{$lxc.Name}}:{{.HostPort}}
+        mode tcp
+        bind 0.0.0.0:{{.HostPort}}
+        server {{$lxc.Name}}:{{.LxcPort}} {{$lxc.PrivateIPv4}}:{{.LxcPort}}
+    {{ end -}}
+{{- end }}
 
 backend certbot
         server localhost 127.0.0.1:9980
