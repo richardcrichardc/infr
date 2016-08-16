@@ -39,13 +39,13 @@ func configViewCmd(args []string) {
 			errorExit("No config for: %s", name)
 		}
 	default:
-		errorExit("Too many arguments for 'view'.")
+		errorExit("Too many arguments for 'view [<name>]'.")
 	}
 }
 
 func configSetCmd(args []string) {
-	if len(args) == 0 || len(args) > 2 {
-		errorExit("Wrong number of arguments for 'set'.")
+	if len(args) != 2 {
+		errorExit("Wrong number of arguments for 'set <name> <value'.")
 	}
 
 	config.General[args[0]] = args[1]
@@ -54,7 +54,7 @@ func configSetCmd(args []string) {
 
 func configUnsetCmd(args []string) {
 	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'unset'.")
+		errorExit("Wrong number of arguments for 'unset <name>'.")
 	}
 
 	delete(config.General, args[0])
