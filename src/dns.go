@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"infr/rage4"
 	"strings"
 )
 
@@ -17,64 +15,20 @@ const (
 )
 
 type dnsRecord struct {
-	Name    string
-	Type    string
-	Value   string
-	TTL     int
-	Reason  string
-	Status  recordStatus
-	Rage4Id int
+	Name       string
+	Type       string
+	Value      string
+	TTL        int
+	Reason     string
+	Status     recordStatus
+	ProviderId int
 }
 
-func dnsCmd(args []string) {
-	if len(args) == 0 {
-		dnsListCmd(args)
-	} else {
-		switch args[0] {
-		case "list":
-			dnsListCmd(parseFlags(args, noFlags))
-		case "fix":
-			dnsFixCmd(parseFlags(args, noFlags))
-		default:
-			errorExit("Invalid command: %s", args[0])
-		}
-	}
-}
-
-func dnsListCmd(args []string) {
-	records := dnsRecordsNeeded()
-	managed := dnsIsManaged()
-
-	if managed {
-		records = checkDnsRecords(records)
-	}
-
-	fmt.Println("FQDN                                     TYPE  VALUE           TTL     FOR                 STATUS")
-	fmt.Println("=================================================================================================")
-	for _, record := range records {
-		fmt.Printf("%-40s %-5s %-15s %-7d %-19s %-6s\n",
-			record.Name,
-			record.Type,
-			record.Value,
-			record.TTL,
-			record.Reason,
-			recordStatusString(record.Status))
-	}
-
-	if !managed {
-		fmt.Printf("\nDNS records are not automatically managed, set 'dnsRage4..' config settings to enable.\n")
-	}
-
-}
-
-func dnsFixCmd(args []string) {
-	dnsFix()
-}
-
-func dnsFix() {
-	records := dnsRecordsNeeded()
-	records = checkDnsRecords(records)
-	fixDnsRecords(records)
+type dnsProvider interface {
+	GetRecords(zone string) []dnsRecord
+	CreateRecord(zone string, rec dnsRecord) error
+	UpdateRecord(zone string, rec dnsRecord) error
+	DeleteRecord(zone string, rec dnsRecord) error
 }
 
 func infrDomain() string {
@@ -89,8 +43,20 @@ func vnetDomain() string {
 	return vnetPrefix + "." + dnsDomain
 }
 
-func dnsIsManaged() bool {
-	return generalConfig("dnsRage4Account") != ""
+func getDnsProvider() dnsProvider {
+	switch generalConfig("dnsProvider") {
+	case "rage4":
+		return newDNSRage4()
+	default:
+		return nil
+	}
+}
+
+func dnsFix() {
+	provider := getDnsProvider()
+	records := dnsRecordsNeeded()
+	records = checkDnsRecords(provider, records)
+	fixDnsRecords(provider, records)
 }
 
 func dnsRecordsNeeded() []dnsRecord {
@@ -151,16 +117,12 @@ func recordStatusString(v recordStatus) string {
 	}
 }
 
-func checkDnsRecords(records []dnsRecord) []dnsRecord {
+func checkDnsRecords(provider dnsProvider, records []dnsRecord) []dnsRecord {
 	dnsDomain := needGeneralConfig("dnsDomain")
 
-	client := rage4.NewClient(needGeneralConfig("dnsRage4Account"), needGeneralConfig("dnsRage4Key"))
+	actualRecords := provider.GetRecords(dnsDomain)
 
-	domain, err := client.GetDomainByName(dnsDomain)
-	checkErr(err)
-
-	actualRecords, err := client.GetRecords(domain.Id)
-	var extras []rage4.Record
+	var extras []dnsRecord
 
 	for i, _ := range records {
 		records[i].Status = MISSING
@@ -171,9 +133,9 @@ aRecLoop:
 		if strings.HasSuffix(aRec.Name, infrDomain()) || strings.HasSuffix(aRec.Name, vnetDomain()) {
 			for i, rec := range records {
 				if rec.Name == aRec.Name {
-					records[i].Rage4Id = aRec.Id
+					records[i].ProviderId = aRec.ProviderId
 
-					if aRec.Type == rec.Type && aRec.Content == rec.Value && aRec.TTL == rec.TTL {
+					if aRec.Type == rec.Type && aRec.Value == rec.Value && aRec.TTL == rec.TTL {
 						records[i].Status = CORRECT
 					} else {
 						records[i].Status = INCORRECT
@@ -181,69 +143,56 @@ aRecLoop:
 					continue aRecLoop
 				}
 			}
-			extras = append(extras, aRec)
+			extra := aRec
+			extra.Status = EXTRA
+			extras = append(extras, extra)
 		}
 	}
 
-	for _, extra := range extras {
-		records = append(records, dnsRecord{
-			Name:    extra.Name,
-			Type:    extra.Type,
-			Value:   extra.Content,
-			TTL:     extra.TTL,
-			Reason:  "",
-			Status:  EXTRA,
-			Rage4Id: extra.Id})
-	}
+	records = append(records, extras...)
+
 	return records
 }
 
-func fixDnsRecords(records []dnsRecord) {
+func fixDnsRecords(provider dnsProvider, records []dnsRecord) {
 	dnsDomain := needGeneralConfig("dnsDomain")
-
-	client := rage4.NewClient(needGeneralConfig("dnsRage4Account"), needGeneralConfig("dnsRage4Key"))
-
-	domain, err := client.GetDomainByName(dnsDomain)
-	checkErr(err)
 
 	for _, rec := range records {
 
-		rage4Rec := rage4.Record{
-			Id:       rec.Rage4Id,
-			Name:     rec.Name,
-			Content:  rec.Value,
-			Type:     rec.Type,
-			TTL:      rec.TTL,
-			Priority: 1,
-			DomainId: domain.Id,
-			IsActive: true}
+		/*		rage4Rec := rage4.Record{
+				Id:       rec.Rage4Id,
+				Name:     rec.Name,
+				Content:  rec.Value,
+				Type:     rec.Type,
+				TTL:      rec.TTL,
+				Priority: 1,
+				DomainId: domain.Id,
+				IsActive: true}
+		*/
+		//var status rage4.Status
 
-		var status rage4.Status
+		var err error
 
 		switch rec.Status {
 		case MISSING:
 			println("Creating DNS record:", rec.Name)
-			status, err = client.CreateRecord(domain.Id, rage4Rec)
+			err = provider.CreateRecord(dnsDomain, rec)
 		case CORRECT:
 			// do nothing
 			continue
 		case INCORRECT:
 			println("Updating DNS record:", rec.Name)
-			status, err = client.UpdateRecord(rec.Rage4Id, rage4Rec)
+			err = provider.UpdateRecord(dnsDomain, rec)
 		case EXTRA:
 			println("Removing DNS record:", rec.Name)
-			status, err = client.DeleteRecord(rec.Rage4Id)
+			err = provider.DeleteRecord(dnsDomain, rec)
 		default:
 			errorExit("Invalid recordStatus: %s %d", rec.Name, rec.Status)
 		}
 
 		checkErr(err)
 
-		if status.Status == false {
-			errorExit("Error: %s", status.Error)
-		}
 	}
-
 }
 
 func checkErr(err error) {
