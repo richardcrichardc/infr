@@ -47,6 +47,8 @@ func getDnsProvider() dnsProvider {
 	switch generalConfig("dnsProvider") {
 	case "rage4":
 		return newDNSRage4()
+	case "vultr":
+		return newDNSVultr()
 	default:
 		return nil
 	}
@@ -158,19 +160,6 @@ func fixDnsRecords(provider dnsProvider, records []dnsRecord) {
 	dnsDomain := needGeneralConfig("dnsDomain")
 
 	for _, rec := range records {
-
-		/*		rage4Rec := rage4.Record{
-				Id:       rec.Rage4Id,
-				Name:     rec.Name,
-				Content:  rec.Value,
-				Type:     rec.Type,
-				TTL:      rec.TTL,
-				Priority: 1,
-				DomainId: domain.Id,
-				IsActive: true}
-		*/
-		//var status rage4.Status
-
 		var err error
 
 		switch rec.Status {
@@ -191,7 +180,6 @@ func fixDnsRecords(provider dnsProvider, records []dnsRecord) {
 		}
 
 		checkErr(err)
-
 	}
 }
 
