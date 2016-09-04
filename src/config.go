@@ -87,7 +87,7 @@ func loadConfig2(configBytes []byte) {
 	}
 
 	remoteConfigBytes := []byte(remoteConfig)
-	if !bytes.Equal(configBytes, remoteConfigBytes) {
+	if len(remoteConfigBytes) != 0 && !bytes.Equal(configBytes, remoteConfigBytes) {
 		// Remote configs match each other but differ from local config, someone else has changed something.
 		// Reload remote configs in case another host has been added (this is the uncommon worst case and can be optimised)
 		fmt.Println("Remote config differs, reloading in case hosts have been added")
