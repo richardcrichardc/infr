@@ -1,10 +1,7 @@
-#INFR
+# INFR
+
 
 ## Introduction
-
-To be done
-
-## Architecture Overview
 
 To be done
 
@@ -26,7 +23,7 @@ Here are the options you will be prompted for:
 
 Once set up, these options can be changed using the `infr config` command.
 
-###Adding your first Host  
+### Adding your first Host  
 
 Now that you have your minimal configuration, you can add a host. 
 
@@ -75,9 +72,9 @@ To be done
 
 To be done
 
-##How it Works
+## How it Works
 
-### <a name="how-hosts-are-installed"></a>How Hosts are installed
+### <a name="how-hosts-are-installed"/></a> How Hosts are installed
 
 1. First Infr will download and build iPXE which is used to start a network install of Debian. (This will fail if you don't have a C compiler set up - run `sudo apt-get install build essential` or similar if you have problems.)
 2. Next it will upload the configuration settings for the installer to an anonymous Gist on Github. (This includes the SSH public key you specified above - if this worries you review how public key crypto works before running the `hosts add` command.)
@@ -87,11 +84,3 @@ To be done
     * Sets up BTRFS as the filesystem, which is used for creating backups
     * Installs your SSH public key so the machine can be accesses remotely
 6. Once Debian is installed Infr SSHs in and sets up the host, essentially installing HAProxy and setting it's initial configuration.
-
-Once 
-
-
-  
-  
-
-
