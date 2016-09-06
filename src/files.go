@@ -312,6 +312,24 @@ install-ssl-certs
 service haproxy reload
 `,
 
+    "help": `.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "INFR" "" "September 2016" "" ""
+.
+.SH "NAME"
+\fBinfr\fR \- manage virtual hosting infrastructure
+.
+.SH "USAGE"
+\fBinfr\fR [\fIoptions\fR] \fIhosts\fR [\fIlist\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fIhosts\fR \fIadd\fR [\fI\-p\fR \fIroot\-password\fR] \fIname\fR \fItarget\-IP\-address\fR
+.
+.SH "SYNOPSIS"
+\fBname\fR [\fIoptional\fR\.\.\.] \fIflags\fR
+`,
+
     "infr-backup": `SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 MAILTO=root

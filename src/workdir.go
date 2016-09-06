@@ -24,15 +24,15 @@ func restoreCwd() {
 	}
 }
 
+func resolveWorkDir() {
+	workDirPath = resolveHome(workDirPath)
+}
+
 func cdWorkDir() {
 	err := os.Chdir(workDirPath)
 	if err != nil {
 		errorExit("Unable to change to working directory '%s', use 'init' subcommand to make sure it exists.", workDirPath)
 	}
-}
-
-func expandWorkDirPath() {
-	workDirPath = resolveHome(workDirPath)
 }
 
 func resolveHome(path string) string {

@@ -8,6 +8,11 @@ import (
 	"os"
 )
 
+//convert help to html and roff (needs ruby-ronn)
+//go:generate ronn --roff help.ronn
+//go:generate mv help files/help
+
+//inline files directory
 //go:generate go run scripts/inliner.go
 
 func main() {
@@ -15,40 +20,45 @@ func main() {
 	if len(args) == 0 {
 		errorExit("Please specify a command.")
 	}
+	cmd := args[0]
 
-	expandWorkDirPath()
 	saveCwd()
-	openLog()
 
-	switch args[0] {
-	case "config":
-		loadConfig()
-		configCmd(parseFlags(args, noFlags))
-	case "keys":
-		loadConfig()
-		keysCmd(parseFlags(args, noFlags))
-	case "hosts":
-		loadConfig()
-		hostsCmd(parseFlags(args, noFlags))
-	case "host":
-		loadConfig()
-		hostCmd(parseFlags(args, noFlags))
-	case "lxcs":
-		loadConfig()
-		lxcsCmd(parseFlags(args, noFlags))
-	case "lxc":
-		loadConfig()
-		lxcCmd(parseFlags(args, noFlags))
-	case "dns":
-		loadConfig()
-		dnsCmd(parseFlags(args, noFlags))
-	case "backups":
-		loadConfig()
-		backupsCmd(parseFlags(args, noFlags))
+	// These commands do not require working directory or configuration
+	switch cmd {
+	case "init":
+		initCmd(parseFlags(args, noFlags))
+		os.Exit(0)
 	case "help":
 		helpCmd(parseFlags(args, noFlags))
+		os.Exit(0)
+	}
+
+	// All other commands need a working directory and minimal configuration
+
+	resolveWorkDir()
+	openLog()
+	loadConfig()
+
+	switch cmd {
+	case "config":
+		configCmd(parseFlags(args, noFlags))
+	case "keys":
+		keysCmd(parseFlags(args, noFlags))
+	case "hosts":
+		hostsCmd(parseFlags(args, noFlags))
+	case "host":
+		hostCmd(parseFlags(args, noFlags))
+	case "lxcs":
+		lxcsCmd(parseFlags(args, noFlags))
+	case "lxc":
+		lxcCmd(parseFlags(args, noFlags))
+	case "dns":
+		dnsCmd(parseFlags(args, noFlags))
+	case "backups":
+		backupsCmd(parseFlags(args, noFlags))
 	default:
-		errorExit("Invalid command: %s", args[0])
+		errorExit("Invalid command: %s", cmd)
 	}
 }
 

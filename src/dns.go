@@ -56,9 +56,12 @@ func getDnsProvider() dnsProvider {
 
 func dnsFix() {
 	provider := getDnsProvider()
-	records := dnsRecordsNeeded()
-	records = checkDnsRecords(provider, records)
-	fixDnsRecords(provider, records)
+
+	if provider != nil {
+		records := dnsRecordsNeeded()
+		records = checkDnsRecords(provider, records)
+		fixDnsRecords(provider, records)
+	}
 }
 
 func dnsRecordsNeeded() []dnsRecord {

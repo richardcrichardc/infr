@@ -104,7 +104,7 @@ func lxcListCmd(args []string) {
 
 func lxcAddCmd(args []string) {
 	if len(args) != 4 {
-		errorExit("Wrong number of arguments for 'lxcs add'.")
+		errorExit("Wrong number of arguments for 'lxcs add <name> <distro> <release> <host>'.")
 	}
 
 	name := strings.ToLower(args[0])

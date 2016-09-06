@@ -21,10 +21,6 @@ var config struct {
 var hostsDown string
 
 func loadConfig() {
-	if err := os.MkdirAll(workDirPath, 0700); err != nil {
-		errorExit("Error creating working directory: %s", err)
-	}
-
 	cdWorkDir()
 	defer restoreCwd()
 

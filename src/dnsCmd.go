@@ -40,7 +40,7 @@ func dnsListCmd(args []string) {
 	}
 
 	if provider == nil {
-		fmt.Printf("\nDNS records are not automatically managed, set 'dnsRage4..' config settings to enable.\n")
+		fmt.Printf("\nDNS records are not automatically managed, set 'dnsProvider' and related config settings to enable.\n")
 	}
 
 }

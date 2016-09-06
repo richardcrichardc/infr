@@ -1,0 +1,15 @@
+infr - manage virtual hosting infrastructure
+============================================
+
+## USAGE
+
+`infr` [_options_] <hosts> [<list>] <br>
+`infr` [_options_] <hosts> <add> [<-p> _root-password_] _name_ _target-IP-address_
+
+
+name(1) -- short, single-sentence description
+=============================================
+
+## SYNOPSIS
+
+`name` [<optional>...] <flags>

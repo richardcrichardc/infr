@@ -60,6 +60,8 @@ func hostsAddFlags(fs *flag.FlagSet) {
 }
 
 func hostsAddCmd(args []string) {
+	var err error
+
 	if len(args) != 2 {
 		errorExit("Wrong number of arguments for 'hosts add [-p <root-password>] <name> <target IP address>'.")
 	}
@@ -82,12 +84,9 @@ func hostsAddCmd(args []string) {
 		down:        true,
 	}
 
-	input, err := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + publicIPv4 + "? (type YES to confirm) ")
-	if err != nil {
-		errorExit("%s", err.Error())
-	}
+	input := util.Prompt("ARE YOU SURE YOU WANT TO REINSTALL THE OPERATING SYSTEM ON THE MACHINE AT " + publicIPv4 + "? (type YES to confirm)")
 
-	if input != "YES\n" {
+	if input != "YES" {
 		errorExit("ABORTING")
 	}
 
@@ -165,14 +164,11 @@ func hostsReconfigureCmd(h *host, args []string) {
 	}
 
 	if reconfigureNetwork {
-		input, err := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
+		input := util.Prompt(`RECONFIGURING NETWORK ON HOST WILL BUMP ALL CONTAINERS OFF THE NETWORK (RESTART
 HOST OR CONTAINERS TO REATTACH) AND IS ONLY NEEDED IF VNET IP CHANGES.
-DO YOU WANT TO CONTINUE? (type YES to confirm) `)
-		if err != nil {
-			errorExit("%s", err.Error())
-		}
+DO YOU WANT TO CONTINUE? (type YES to confirm)`)
 
-		if input != "YES\n" {
+		if input != "YES" {
 			errorExit("ABORTING")
 		}
 

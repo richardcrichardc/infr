@@ -38,8 +38,12 @@ func keysAddCmd(args []string) {
 	if len(args) != 1 {
 		errorExit("Wrong number of arguments for 'add'.")
 	}
+	keysAdd(args[0])
+	saveConfig()
+}
 
-	newKeysBytes, err := ioutil.ReadFile(args[0])
+func keysAdd(keyFile string) {
+	newKeysBytes, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		fmt.Println("Error reading keyfile: %s", err.Error())
 	}
@@ -49,8 +53,6 @@ func keysAddCmd(args []string) {
 
 	allKeys := stripEmptyStrings(uniqueStrings(append(confKeys, newKeys...)))
 	config.Keys = strings.Join(allKeys, "\n")
-
-	saveConfig()
 }
 
 func keysRemoveCmd(args []string) {
