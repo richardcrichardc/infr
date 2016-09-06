@@ -41,7 +41,7 @@ Where:
  *  `name` is what you want to call the host, and 
  *  `ip-address` is the machines public ip address
  
-This will start the bootstrap process which replaces the hosts operating system with Debian 8 on a BTRFS filesystem. It takes 10-15 minutes, look [here](how-hosts-are-installed) if you want to know how it works.
+This will start the bootstrap process which replaces the hosts operating system with Debian 8 on a BTRFS filesystem. It takes 10-15 minutes, look [here](#how-hosts-are-installed) if you want to know how it works.
 
 Once your host is set up you can list your hosts:
 
