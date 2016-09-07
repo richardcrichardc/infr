@@ -12,8 +12,10 @@ func (h *host) HAProxyHttpsDomains() string {
 	var fqdns []string
 
 	for _, lxc := range h.AllLxcs() {
-		fqdns = append(fqdns, lxc.FQDN())
-		fqdns = append(fqdns, lxc.Aliases...)
+		if lxc.Https == HTTPSTERMINATE {
+			fqdns = append(fqdns, lxc.FQDN())
+			fqdns = append(fqdns, lxc.Aliases...)
+		}
 	}
 
 	return strings.Join(fqdns, "\n")
