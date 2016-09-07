@@ -97,8 +97,10 @@ func lxcListCmd(args []string) {
 		errorExit("Too many arguments for 'lxcs [list]'.")
 	}
 
+	fmt.Printf("NAME            HOST            PUBLIC IP       PRIVATE IP\n")
+	fmt.Printf("=========================================================\n")
 	for _, lxc := range config.Lxcs {
-		fmt.Printf("%-15s %-15s %-15s\n", lxc.Name, lxc.Host, lxc.PrivateIPv4)
+		fmt.Printf("%-15s %-15s %-15s %-15s\n", lxc.Name, lxc.Host, lxc.FindHost().PublicIPv4, lxc.PrivateIPv4)
 	}
 }
 
