@@ -75,7 +75,7 @@ d-i grub-installer/bootdev  string default
 d-i preseed/late_command string \
 	mkdir /target/home/manager/.ssh																		&&\
 	chmod u=rwx /target/home/manager/.ssh																&&\
-	echo "%s" > /target/home/manager/.ssh/authorized_keys												&&\
+	%s > /target/home/manager/.ssh/authorized_keys												&&\
 	chmod u=rw /target/home/manager/.ssh/authorized_keys												&&\
 	sed -i 's/manager:[^:]*:/manager:!:/' /target/etc/shadow											&&\
 	sed -i 's/sudo[[:space:]]*ALL=(ALL:ALL) ALL/sudo ALL=(ALL:ALL) NOPASSWD:ALL/' /target/etc/sudoers

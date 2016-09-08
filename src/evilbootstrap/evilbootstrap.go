@@ -74,11 +74,13 @@ func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthK
 
 func genPxeScript(managerAuthKeys, lastPreseedURL string) (script, preseedURL string, err error) {
 	newGist := true
+	keyList := strings.Split(managerAuthKeys, "\n")
+	for i := range keyList {
+		keyList[i] = fmt.Sprintf("echo '%s'", keyList[i])
+	}
+	escapedManagerAuthKeyEchos := "(" + strings.Join(keyList, ";") + ")"
 
-	// Add slash before newline to provide multiline string in preseed cfg
-	escapedManagerAuthKeys := strings.Replace(managerAuthKeys, "\n", "\\\n", -1)
-
-	preseedCfg := fmt.Sprintf(preseedTemplate, escapedManagerAuthKeys)
+	preseedCfg := fmt.Sprintf(preseedTemplate, escapedManagerAuthKeyEchos)
 
 	if lastPreseedURL != "" {
 		msg("Checking preseed.cfg at %s ...", lastPreseedURL)
