@@ -46,7 +46,7 @@ infr \- manage virtual hosting infrastructure
 .br
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\fR
 .br
-\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBTERMINATE\fR
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR
 .br
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\fR
 .P

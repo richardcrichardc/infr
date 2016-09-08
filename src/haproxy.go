@@ -12,10 +12,11 @@ func (h *host) HAProxyHttpsDomains() string {
 	var fqdns []string
 
 	for _, lxc := range h.AllLxcs() {
-		if lxc.Https == HTTPSTERMINATE {
+		_ = lxc
+		/*if lxc.Https == HTTPSTERMINATE {
 			fqdns = append(fqdns, lxc.FQDN())
 			fqdns = append(fqdns, lxc.Aliases...)
-		}
+		}*/
 	}
 
 	return strings.Join(fqdns, "\n")
@@ -68,7 +69,7 @@ frontend http
         mode http
         option httplog
 
-        use_backend certbot if { path_beg /.well-known/ }
+        #use_backend certbot if { path_beg /.well-known/ }
 
 {{ range .host.AllLxcs -}}
     {{- if .HttpBackend }}
@@ -79,19 +80,43 @@ frontend http
         default_backend no_backend
 
 
+#frontend https
+#        bind {{.host.PublicIPv4}}:443 ssl crt /etc/haproxy/ssl/default.crt crt-list /etc/haproxy/ssl-crt-list
+#        mode http
+#        option httplog
+#{{ range .host.AllLxcs -}}
+#    {{- if .HttpsBackend }}
+#        use_backend {{.HttpsBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
+#    {{- end -}}
+#{{- end }}
+
 frontend https
-        bind {{.host.PublicIPv4}}:443 ssl crt /etc/haproxy/ssl/default.crt crt-list /etc/haproxy/ssl-crt-list
-        mode http
-        option httplog
+        bind {{.host.PublicIPv4}}:443
+        mode tcp
+
+        tcp-request inspect-delay 2s
+        tcp-request content reject if { req.ssl_ver 3 }
+
 {{ range .host.AllLxcs -}}
+    {{ $backend := .HttpsBackend -}}
     {{- if .HttpsBackend }}
-        use_backend {{.HttpsBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
+        {{- range .Aliases }}
+            acl {{$backend}}_acl req.ssl_sni -i {{.}}
+            use_backend {{$backend}} if {{$backend}}_acl
+        {{- end }}
     {{- end -}}
 {{- end }}
+
 
 {{ range .host.AllLxcs }}
 backend {{.Name}}_http
         server {{.Name}} {{.PrivateIPv4}}:{{.HttpPort}}
+{{ end }}
+
+{{ range .host.AllLxcs }}
+backend {{.Name}}_https
+        mode tcp
+        server {{.Name}} {{.PrivateIPv4}}:443
 {{ end }}
 
 {{ $host := .host -}}

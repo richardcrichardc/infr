@@ -19,7 +19,7 @@ type httpsAction int
 
 const (
 	HTTPSNONE = iota
-	HTTPSTERMINATE
+	HTTPSFORWARD
 )
 
 type tcpForward struct {
@@ -208,8 +208,8 @@ func httpsActionString(a httpsAction) string {
 	switch a {
 	case HTTPSNONE:
 		return "NONE"
-	case HTTPSTERMINATE:
-		return "TERMINATE"
+	case HTTPSFORWARD:
+		return "FORWARD"
 	default:
 		panic("Unknown httpAction")
 	}
@@ -271,10 +271,10 @@ func lxcHttpsCmd(l *lxc, args []string) {
 	switch option {
 	case "NONE":
 		l.Https = HTTPSNONE
-	case "TERMINATE":
-		l.Https = HTTPSTERMINATE
+	case "FORWARD":
+		l.Https = HTTPSFORWARD
 	default:
-		errorExit("Invalid option, please specify: NONE or TERMINATE")
+		errorExit("Invalid option, please specify: NONE or FORWARD")
 	}
 
 	saveConfig()
@@ -489,8 +489,8 @@ func (l *lxc) HttpsBackend() string {
 	switch l.Https {
 	case HTTPSNONE:
 		return ""
-	case HTTPSTERMINATE:
-		return l.Name + "_http"
+	case HTTPSFORWARD:
+		return l.Name + "_https"
 	default:
 		panic("Unexpected httpsAction")
 	}
