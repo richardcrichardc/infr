@@ -125,6 +125,8 @@ backend {{.Name}}_https
     {{- range .TCPForwards }}
 listen forward_{{$host.Name}}:{{.HostPort}}_{{$lxc.Name}}:{{.HostPort}}
         mode tcp
+        timeout client 3600s
+        timeout server 3600s
         bind 0.0.0.0:{{.HostPort}}
         server {{$lxc.Name}}:{{.LxcPort}} {{$lxc.PrivateIPv4}}:{{.LxcPort}}
     {{ end -}}
