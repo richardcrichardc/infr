@@ -107,11 +107,6 @@ cd $DIR
 # Performs an incremental send if both from-snapshot and to-snapshot are presend
 # otherwise perform a full send of to-snapshot
 
-if [ ! "$#" -eq 2 ];then
-	echo Usage: backup-send from-snapshot to-snapshot
-	exit 1
-fi
-
 SNAPSHOT=$1
 PREV=$2
 
