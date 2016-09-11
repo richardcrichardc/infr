@@ -3,8 +3,36 @@ infr - manage virtual hosting infrastructure
 
 ## USAGE
 
-`infr` [_options_] <hosts> [<list>] <br>
-`infr` [_options_] <hosts> <add> [<-p> _root-password_] _name_ _target-IP-address_
+`infr` [_options_] `hosts` [`list`] <br>
+`infr` [_options_] `hosts add` [`-p` <root-password>] <name> <target-IP-address> <br>
+`infr` [_options_] `host` <name> `reconfigure` [`-n`] [`-s`] [`-k`] [`-R`] <br>
+`infr` [_options_] `host` <name> `remove` <br>
+
+`infr` [_options_] `lxcs` <host> [`list`] <br>
+`infr` [_options_] `lxcs` <host> `add` <name> <distribution> <release> <host> <br>
+`infr` [_options_] `lxc` <name> `show` <br>
+`infr` [_options_] `lxc` <name> `add-alias` <FQDN> <br>
+`infr` [_options_] `lxc` <name> `remove-alias` <FQDN> <br>
+`infr` [_options_] `lxc` <name> `http` `NONE`|`FORWARD`|`REDIRECT` <br>
+`infr` [_options_] `lxc` <name> `https` `NONE`|`FORWARD` <br>
+`infr` [_options_] `lxc` <name> `remove` <br>
+
+`infr` [_options_] `backups` [`list`] <br>
+`infr` [_options_] `backups start` <from-host> <to-host> <br>
+`infr` [_options_] `backups stop` <from-host> <to-host> <br>
+
+`infr` [_options_] `config` [`show`] <br>
+`infr` [_options_] `config set` <name> <value> <br>
+`infr` [_options_] `config unset` <name><br>
+
+`infr` [_options_] `keys` [`list`] <br>
+`infr` [_options_] `keys add` <keyfile> <br>
+`infr` [_options_] `keys remove`] <keyfile> <br>
+
+`infr` [_options_] `dns` [`list`] <br>
+`infr` [_options_] `dns fix` <br>
+
+`infr` [_options_] `help` <br>
 
 
 name(1) -- short, single-sentence description

@@ -7,10 +7,90 @@
 \fBinfr\fR \- manage virtual hosting infrastructure
 .
 .SH "USAGE"
-\fBinfr\fR [\fIoptions\fR] \fIhosts\fR [\fIlist\fR]
+\fBinfr\fR [\fIoptions\fR] \fBhosts\fR [\fBlist\fR]
 .
 .br
-\fBinfr\fR [\fIoptions\fR] \fIhosts\fR \fIadd\fR [\fI\-p\fR \fIroot\-password\fR] \fIname\fR \fItarget\-IP\-address\fR
+\fBinfr\fR [\fIoptions\fR] \fBhosts add\fR [\fB\-p\fR \fIroot\-password\fR] \fIname\fR \fItarget\-IP\-address\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBreconfigure\fR [\fB\-n\fR] [\fB\-s\fR] [\fB\-k\fR] [\fB\-R\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBhost\fR \fIname\fR \fBremove\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBlxcs\fR \fIhost\fR [\fBlist\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxcs\fR \fIhost\fR \fBadd\fR \fIname\fR \fIdistribution\fR \fIrelease\fR \fIhost\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBshow\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBadd\-alias\fR \fIFQDN\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\-alias\fR \fIFQDN\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBbackups\fR [\fBlist\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBbackups start\fR \fIfrom\-host\fR \fIto\-host\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBbackups stop\fR \fIfrom\-host\fR \fIto\-host\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBconfig\fR [\fBshow\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBconfig set\fR \fIname\fR \fIvalue\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBconfig unset\fR \fIname\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBkeys\fR [\fBlist\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBkeys add\fR \fIkeyfile\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBkeys remove\fR] \fIkeyfile\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBdns\fR [\fBlist\fR]
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBdns fix\fR
+.
+.br
+.
+.P
+\fBinfr\fR [\fIoptions\fR] \fBhelp\fR
+.
+.br
 .
 .SH "SYNOPSIS"
 \fBname\fR [\fIoptional\fR\.\.\.] \fIflags\fR

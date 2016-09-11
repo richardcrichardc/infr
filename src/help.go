@@ -12,7 +12,7 @@ func helpCmd(args []string) {
 	}
 
 	cmd := exec.Command("man", "-l", "-")
-	cmd.Stdin = bytes.NewBufferString(help)
+	cmd.Stdin = bytes.NewBufferString(files("help"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
