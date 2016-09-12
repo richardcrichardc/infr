@@ -9,8 +9,9 @@ import (
 )
 
 //convert help to html and roff (needs ruby-ronn)
-//go:generate ronn --roff help.ronn
-//go:generate mv help files/help
+//gog:generate ronn --roff help.ronn
+//gog:generate mv help files/help
+//go:generate scripts/compile-help
 
 //inline files directory
 //go:generate go run scripts/inliner.go

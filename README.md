@@ -1,5 +1,6 @@
 # INFR
 
+<!-- Authoring note: This file is processed by ronn to create a manpage, ronn does not support H4s and below-->
 
 ## Introduction
 
@@ -7,13 +8,12 @@ To be done
 
 ## Getting Started
 
-### Getting Infr
-
-#### Binary Downloads
+### Binary Download
 
  * [Latest x86-64 Linux binary](https://tawherotech.nz/infr/infr)
 
-#### Building from source
+
+### Building from source
 
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Ronn](https://github.com/rtomayko/ronn) (try `apt-get install ruby-ronn`)
@@ -23,7 +23,7 @@ To be done
 
 ### Other Prerequisites
 
-Adding Hosts involves creating a custom build of [iPXE](http://ipxe.org/) so you will need a working C compiler and some libraries on your machine. 
+Adding Hosts involves creating a custom build of [iPXE](http://ipxe.org/) so you will need a working C compiler and some libraries on your machine.
 
 If you are running a Debian based distribution you can make sure your have these dependencies by running:
 
@@ -31,7 +31,7 @@ If you are running a Debian based distribution you can make sure your have these
 
 ### Initial configuration
 
-Before you can use Infr you need a minimal configuration. Run `infr init` and you will be prompted for the essential settings. 
+Before you can use Infr you need a minimal configuration. Run `infr init` and you will be prompted for the essential settings.
 
 Here are the options you will be prompted for:
 
@@ -45,13 +45,13 @@ Here are the options you will be prompted for:
 
 Once set up, these options can be changed using the `infr config` command.
 
-### Adding your first Host  
+### Adding your first Host
 
-Now that you have your minimal configuration, you can add a host. 
+Now that you have your minimal configuration, you can add a host.
 
 First you will need a server to use as the Host. Infr is designed to use VPSs from VPS providers such as Linode, Digital Ocean and Vultr, it can however use any Linux servers on the public internet.
 
-So go to your favourite VPS provider and spin up a host. It does not matter what distribution you select as we will be replacing it immediately to get a BTRFS filesystem used by the backup. All you need is to know the host's IP address abd have root access via SSH, using the public key you added above, or with a password. DO NOT USE A MACHINE WITH DATA ON IT YOU WANT TO KEEP, THE ENTIRE HARD DISK WILL BE ERASED. 
+So go to your favourite VPS provider and spin up a host. It does not matter what distribution you select as we will be replacing it immediately to get a BTRFS filesystem used by the backup. All you need is to know the host's IP address abd have root access via SSH, using the public key you added above, or with a password. DO NOT USE A MACHINE WITH DATA ON IT YOU WANT TO KEEP, THE ENTIRE HARD DISK WILL BE ERASED.
 
 Once the machine is up you can add it to the machines managed by infr by running the command:
 
@@ -60,9 +60,9 @@ Once the machine is up you can add it to the machines managed by infr by running
 Where:
 
  * `root-password` is the the machine's root password, this can be skipped if your SSH key is authorised to login as root
- *  `name` is what you want to call the host, and 
+ *  `name` is what you want to call the host, and
  *  `ip-address` is the machines public ip address
- 
+
 This will start the bootstrap process which replaces the hosts operating system with Debian 8 on a BTRFS filesystem. It takes 10-15 minutes, look [here](#how-hosts-are-installed) if you want to know how hosts are installed.
 
 Once your host is set up you can list your hosts:
@@ -70,8 +70,8 @@ Once your host is set up you can list your hosts:
     $ infr hosts
     NAME            PUBLIC IP       PRIVATE IP
     ==========================================
-    bob             45.32.191.151   10.8.1.1   
-    
+    bob             45.32.191.151   10.8.1.1
+
 
 We have not configured a DNS Provider yet, so these records have a status of '???'. Let's create a LXC first, then we will sort out these DNS records, before SSHing into the Hosts and LXCs.
 
@@ -80,38 +80,38 @@ We have not configured a DNS Provider yet, so these records have a status of '??
 Now that you have a Host you can put an LXC on it:
 
     $ infr lxcs add fozzie ubuntu xenial bob
-    
+
 That will whir away for a minute or two. Then you can list the LXCs:
 
     $ infr lxcs
     NAME            HOST            PUBLIC IP       PRIVATE IP
     =========================================================
-    fozzie          kaiiwi          45.32.191.151   10.8.1.2    
+    fozzie          kaiiwi          45.32.191.151   10.8.1.2
 
 And find out more about a particular LXC:
-    
+
     $ ./infr lxc bob
     Name:          fozzie
     Host:          bob
     Distro:        ubuntu xenial
-    Aliases:       
+    Aliases:
     HTTP: 	       NONE
     HTTPS:         NONE
     LXC Http Port: 80
-    TCP Forwards:  
-    
+    TCP Forwards:
+
 ### Setting up a DNS Provider
 
 You now have a Host with an LXC on it. Infr will manage the canonical domain names if you let it:
-    
+
     $ infr dns
     FQDN                                     TYPE  VALUE           TTL     FOR                 STATUS
     =================================================================================================
-    bob.infr.mydomain.com                    A     45.32.191.151   3600    HOST PUBLIC IP      ???   
-    bob.vnet.mydomain.com                    A     10.8.1.1        3600    HOST PRIVATE IP     ???   
-    fozzie.infr.mydomain.com                 A     45.32.191.151   3600    LXC HOST PUBLIC IP  ???   
-    fozzie.vnet.mydomain.com                 A     10.8.1.2        3600    LXC PRIVATE IP      ???   
-    
+    bob.infr.mydomain.com                    A     45.32.191.151   3600    HOST PUBLIC IP      ???
+    bob.vnet.mydomain.com                    A     10.8.1.1        3600    HOST PRIVATE IP     ???
+    fozzie.infr.mydomain.com                 A     45.32.191.151   3600    LXC HOST PUBLIC IP  ???
+    fozzie.vnet.mydomain.com                 A     10.8.1.2        3600    LXC PRIVATE IP      ???
+
     DNS records are not automatically managed, set 'dnsProvider' and related config settings to enable.
 
 These are all the DNS records Infr wants to manage for you. If you configure a DNS Provider, Infr will talk to the DNS Provider's API and configure these for you automatically.
@@ -137,12 +137,12 @@ If you are unable or don't want to set up a DNS provider right now, you can simu
 Now that you have a Host an LXC and working DNS you can SSH into the machines and have a look around. Lets SSH into the Host:
 
     $ ssh -A manager@bob.infr.mydomain.com
-   
+
 Manager is the shared management account. It has no password so can only be accessed by users who's SSH keys have been added using `ssh keys add <keyfile>`. Manager is a sudoer with the NOPASSWD option, so you can use sudo to administrate the Host.
 
 Note the '-A' option when SSHing into the Host. This enables SSH key forwarding, which means you can now SSH into the the LXCs on the host:
- 
-    $ ssh fozzie.vnet.mydomain.com  
+
+    $ ssh fozzie.vnet.mydomain.com
 
 ## How it Works
 

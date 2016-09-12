@@ -7,12 +7,25 @@ import (
 )
 
 func helpCmd(args []string) {
-	if len(args) != 0 {
+	var topic string
+
+	switch len(args) {
+	case 0:
+		topic = "summary"
+	case 1:
+		topic = args[0]
+	default:
 		errorExit("Too many arguments for 'help'")
 	}
 
+	topicFile, ok := filesMap["help/"+topic]
+
+	if !ok {
+		errorExit("No help for topic: %s", topic)
+	}
+
 	cmd := exec.Command("man", "-l", "-")
-	cmd.Stdin = bytes.NewBufferString(files("help"))
+	cmd.Stdin = bytes.NewBufferString(topicFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()

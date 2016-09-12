@@ -1,0 +1,9 @@
+infr-hosts - manage virtual hosting infrastructure
+============================================
+
+## USAGE
+
+`infr` [_options_] `hosts` [`list`] <br>
+`infr` [_options_] `hosts add` [`-p` <root-password>] <name> <target-IP-address> <br>
+`infr` [_options_] `host` <name> `reconfigure` [`-n`] [`-s`] [`-k`] [`-R`] <br>
+`infr` [_options_] `host` <name> `remove` <br>

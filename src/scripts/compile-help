@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+# Change to this directory
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+cd ../help
+
+for F in `ls`; do
+	ronn --pipe --roff $F > ../files/help/$F
+done
+
+ronn --pipe --roff ../../README.md > ../files/help/tutorial
