@@ -15,10 +15,9 @@ To be done
 #### Building from source
 
 1. Install [Go](https://golang.org/doc/install)
-2. Install [Ronn](https://github.com/rtomayko/ronn) (try `apt-get install ruby-ronn`)
-3. Clone this repo: `git clone https://github.com/richardcrichardc/infr.git`
-4. Run the build script: `cd infr; ./build`
-5. Run Infr: `./infr`
+2. Clone this repo: `git clone https://github.com/richardcrichardc/infr.git`
+3. Run the build script: `cd infr; ./build`
+4. Run Infr: `./infr`
 
 #### Other Prerequisites
 

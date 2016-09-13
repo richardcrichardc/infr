@@ -184,9 +184,9 @@ func lxcShowCmd(l *lxc, args []string) {
 	fmt.Printf("Name:          %s\n", l.Name)
 	fmt.Printf("Host:          %s\n", l.Host)
 	fmt.Printf("Distro:        %s %s\n", l.Distro, l.Release)
-	fmt.Printf("Aliases:       %s\n", strings.Join(l.Aliases, ", "))
 	fmt.Printf("HTTP: 	       %s\n", httpActionString(l.Http))
 	fmt.Printf("HTTPS:         %s\n", httpsActionString(l.Https))
+	fmt.Printf("Aliases:       %s\n", strings.Join(l.Aliases, ", "))
 	fmt.Printf("LXC Http Port: %d\n", l.HttpPort)
 	fmt.Printf("TCP Forwards:  %s\n", l.TCPForwardsString())
 }

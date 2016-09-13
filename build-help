@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+# This script recompiles the help file into the roff format which is used to display it
+# You need to install Ronn (https://github.com/rtomayko/ronn) - try `apt-get install ruby-ronn`
+
+# Change to this directory
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+ronn --pipe --roff src/help.ronn > src/files/help
