@@ -35,6 +35,13 @@ func loadConfig() {
 	}
 
 	loadConfig2(jsonBytes)
+
+	// Old LXCs will not have HttpsPort in the config, these will be loaded as 0, but they should default to 443
+	for _, lxc := range config.Lxcs {
+		if lxc.HttpsPort == 0 {
+			lxc.HttpsPort = 443
+		}
+	}
 }
 
 func loadConfig2(configBytes []byte) {

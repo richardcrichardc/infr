@@ -37,6 +37,7 @@ type lxc struct {
 	Http        httpAction
 	Https       httpsAction
 	HttpPort    int
+	HttpsPort   int
 	TCPForwards []*tcpForward
 }
 
@@ -81,6 +82,8 @@ func lxcCmd(args []string) {
 			lxcHttpsCmd(l, parseFlags(args, noFlags))
 		case "http-port":
 			lxcHttpPortCmd(l, parseFlags(args, noFlags))
+		case "https-port":
+			lxcHttpsPortCmd(l, parseFlags(args, noFlags))
 		case "add-tcp-forward":
 			lxcAddTcpForwardCmd(l, parseFlags(args, noFlags))
 		case "remove-tcp-forward":
@@ -128,7 +131,8 @@ func lxcAddCmd(args []string) {
 		PrivateIPv4: vnetGetIP(),
 		Distro:      distro,
 		Release:     release,
-		HttpPort:    80}
+		HttpPort:    80,
+		HttpsPort:   443}
 
 	config.Lxcs = append(config.Lxcs, &newLxc)
 	saveConfig()
@@ -181,14 +185,15 @@ func lxcShowCmd(l *lxc, args []string) {
 		errorExit("Too many arguments for 'lxc <name> show'.")
 	}
 
-	fmt.Printf("Name:          %s\n", l.Name)
-	fmt.Printf("Host:          %s\n", l.Host)
-	fmt.Printf("Distro:        %s %s\n", l.Distro, l.Release)
-	fmt.Printf("HTTP: 	       %s\n", httpActionString(l.Http))
-	fmt.Printf("HTTPS:         %s\n", httpsActionString(l.Https))
-	fmt.Printf("Aliases:       %s\n", strings.Join(l.Aliases, ", "))
-	fmt.Printf("LXC Http Port: %d\n", l.HttpPort)
-	fmt.Printf("TCP Forwards:  %s\n", l.TCPForwardsString())
+	fmt.Printf("Name:           %s\n", l.Name)
+	fmt.Printf("Host:           %s\n", l.Host)
+	fmt.Printf("Distro:         %s %s\n", l.Distro, l.Release)
+	fmt.Printf("HTTP: 	        %s\n", httpActionString(l.Http))
+	fmt.Printf("HTTPS:          %s\n", httpsActionString(l.Https))
+	fmt.Printf("Aliases:        %s\n", strings.Join(l.Aliases, ", "))
+	fmt.Printf("LXC Http Port:  %d\n", l.HttpPort)
+	fmt.Printf("LXC Https Port: %d\n", l.HttpsPort)
+	fmt.Printf("TCP Forwards:   %s\n", l.TCPForwardsString())
 }
 
 func httpActionString(a httpAction) string {
@@ -293,6 +298,23 @@ func lxcHttpPortCmd(l *lxc, args []string) {
 	}
 
 	l.HttpPort = port
+
+	saveConfig()
+	l.FindHost().Configure()
+}
+
+func lxcHttpsPortCmd(l *lxc, args []string) {
+	if len(args) != 1 {
+		errorExit("Wrong number of arguments for 'lxc <name> https-port <port>'.")
+	}
+
+	port, _ := strconv.Atoi(args[0]) // returns 0 or maxint on parse error
+
+	if port < 1 || port > 65535 {
+		errorExit("Invalid port, please specify an integer between 1 and 65535.")
+	}
+
+	l.HttpsPort = port
 
 	saveConfig()
 	l.FindHost().Configure()

@@ -116,7 +116,7 @@ backend {{.Name}}_http
 {{ range .host.AllLxcs }}
 backend {{.Name}}_https
         mode tcp
-        server {{.Name}} {{.PrivateIPv4}}:443
+        server {{.Name}} {{.PrivateIPv4}}:{{.HttpsPort}}
 {{ end }}
 
 {{ $host := .host -}}
