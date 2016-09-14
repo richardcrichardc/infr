@@ -12,7 +12,7 @@ type httpAction int
 const (
 	HTTPNONE = iota
 	HTTPFORWARD
-	HTTPREDIRECT
+	HTTPREDIRECTHTTPS
 )
 
 type httpsAction int
@@ -202,8 +202,8 @@ func httpActionString(a httpAction) string {
 		return "NONE"
 	case HTTPFORWARD:
 		return "FORWARD"
-	case HTTPREDIRECT:
-		return "REDIRECT"
+	case HTTPREDIRECTHTTPS:
+		return "REDIRECT-HTTPS"
 	default:
 		panic("Unknown httpAction")
 	}
@@ -246,7 +246,7 @@ func lxcRemoveAliasCmd(l *lxc, args []string) {
 
 func lxcHttpCmd(l *lxc, args []string) {
 	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'lxc <name> http NONE|FORWARD|REDIRECT'.")
+		errorExit("Wrong number of arguments for 'lxc <name> http NONE|FORWARD|REDIRECT-HTTPS'.")
 	}
 
 	option := strings.ToUpper(args[0])
@@ -256,10 +256,10 @@ func lxcHttpCmd(l *lxc, args []string) {
 		l.Http = HTTPNONE
 	case "FORWARD":
 		l.Http = HTTPFORWARD
-	case "REDIRECT":
-		l.Http = HTTPREDIRECT
+	case "REDIRECT-HTTPS":
+		l.Http = HTTPREDIRECTHTTPS
 	default:
-		errorExit("Invalid option, please specify: NONE, FORWARD or REDIRECT")
+		errorExit("Invalid option, please specify: NONE, FORWARD or REDIRECT-HTTPS")
 	}
 
 	saveConfig()
@@ -500,7 +500,7 @@ func (l *lxc) HttpBackend() string {
 		return ""
 	case HTTPFORWARD:
 		return l.Name + "_http"
-	case HTTPREDIRECT:
+	case HTTPREDIRECTHTTPS:
 		return "redirect_https"
 	default:
 		panic("Unexpected httpAction")

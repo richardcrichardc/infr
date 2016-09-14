@@ -13,7 +13,7 @@ infr - manage virtual hosting infrastructure
 `infr` [_options_] `lxc` <name> `show` <br>
 `infr` [_options_] `lxc` <name> `add-alias` <FQDN> <br>
 `infr` [_options_] `lxc` <name> `remove-alias` <FQDN> <br>
-`infr` [_options_] `lxc` <name> `http` `NONE`|`FORWARD`|`REDIRECT` <br>
+`infr` [_options_] `lxc` <name> `http` `NONE`|`FORWARD`|`REDIRECT-HTTPS` <br>
 `infr` [_options_] `lxc` <name> `https` `NONE`|`FORWARD` <br>
 `infr` [_options_] `lxc` <name> `http-port` <port> <br>
 `infr` [_options_] `lxc` <name> `https-port` <port> <br>
