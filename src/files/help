@@ -36,10 +36,16 @@
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\-alias\fR \fIFQDN\fR
 .
 .br
-\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\fR
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\-HTTPS\fR
 .
 .br
-\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR|\fBTERMINATE\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\-port\fR \fIport\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\-port\fR \fIport\fR
 .
 .br
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\fR

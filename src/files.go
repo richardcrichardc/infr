@@ -301,11 +301,12 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
+# reload haproxy before getting new certificates so .well-knwon/acme-challenge is enabled for the new domain
 service haproxy reload
-
 issue-ssl-certs {{.AdminEmail}}
 install-ssl-certs
 
+# reload haproxy after getting new certificates so certificate is used
 service haproxy reload
 `,
 
@@ -347,10 +348,16 @@ service haproxy reload
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\-alias\fR \fIFQDN\fR
 .
 .br
-\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\fR
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\fR \fBNONE\fR|\fBFORWARD\fR|\fBREDIRECT\-HTTPS\fR
 .
 .br
-\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\fR \fBNONE\fR|\fBFORWARD\fR|\fBTERMINATE\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttp\-port\fR \fIport\fR
+.
+.br
+\fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBhttps\-port\fR \fIport\fR
 .
 .br
 \fBinfr\fR [\fIoptions\fR] \fBlxc\fR \fIname\fR \fBremove\fR
