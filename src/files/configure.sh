@@ -14,7 +14,10 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
+# reload haproxy before getting new certificates so .well-knwon/acme-challenge is enabled for the new domain
+service haproxy reload
 issue-ssl-certs {{.AdminEmail}}
 install-ssl-certs
 
+# reload haproxy after getting new certificates so certificate is used
 service haproxy reload

@@ -1,25 +1,23 @@
 package main
 
-import (
-	"strings"
-)
+import ()
 
 func (h *host) HAProxyCfg() string {
 	return executeTemplate(haproxyCfgTmpl, &haproxyCfgData{host: h})
 }
 
-func (h *host) HAProxyHttpsDomains() string {
+func (h *host) HttpsTerminateDomains() []string {
 	var fqdns []string
 
 	for _, lxc := range h.AllLxcs() {
 		_ = lxc
-		/*if lxc.Https == HTTPSTERMINATE {
+		if lxc.Https == HTTPSTERMINATE {
 			fqdns = append(fqdns, lxc.FQDN())
 			fqdns = append(fqdns, lxc.Aliases...)
-		}*/
+		}
 	}
 
-	return strings.Join(fqdns, "\n")
+	return fqdns
 }
 
 type haproxyCfgData struct {
@@ -29,7 +27,6 @@ type haproxyCfgData struct {
 const haproxyCfgTmpl = `
 global
         log /dev/log    local0
-        log /dev/log    local1 notice
         chroot /var/lib/haproxy
         stats socket /run/haproxy/admin.sock mode 660 level admin
         stats timeout 30s
@@ -50,7 +47,6 @@ global
 defaults
         log     global
         mode    http
-        option  httplog
         option  dontlognull
         timeout connect 5000
         timeout client  50000
@@ -69,7 +65,7 @@ frontend http
         mode http
         option httplog
 
-        #use_backend certbot if { path_beg /.well-known/ }
+        use_backend certbot_backend if { path_beg /.well-known/acme-challenge/ } { hdr(Host) -i {{ range .host.HttpsTerminateDomains -}}{{ . }} {{ end }} }
 
 {{ range .host.AllLxcs -}}
     {{- if .HttpBackend }}
@@ -80,43 +76,47 @@ frontend http
         default_backend no_backend
 
 
-#frontend https
-#        bind {{.host.PublicIPv4}}:443 ssl crt /etc/haproxy/ssl/default.crt crt-list /etc/haproxy/ssl-crt-list
-#        mode http
-#        option httplog
-#{{ range .host.AllLxcs -}}
-#    {{- if .HttpsBackend }}
-#        use_backend {{.HttpsBackend}} if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
-#    {{- end -}}
-#{{- end }}
-
 frontend https
         bind {{.host.PublicIPv4}}:443
         mode tcp
+        option tcplog
+        option logasap
 
         tcp-request inspect-delay 2s
         tcp-request content reject if { req.ssl_ver 3 }
 
 {{ range .host.AllLxcs -}}
-    {{ $backend := .HttpsBackend -}}
     {{- if .HttpsBackend }}
-        {{- range .Aliases }}
-            acl {{$backend}}_acl req.ssl_sni -i {{.}}
-            use_backend {{$backend}} if {{$backend}}_acl
-        {{- end }}
-    {{- end -}}
+        use_backend {{.HttpsBackend}} if { req.ssl_sni -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }    {{- end -}}
 {{- end }}
 
 
+frontend https_terminate
+        bind 127.0.0.1:443 ssl crt /etc/haproxy/ssl/default.crt crt-list /etc/haproxy/ssl-crt-list
+        mode http
+        option httplog
+{{ range .host.AllLxcs -}}
+    {{- if .HttpsTerminate }}
+        use_backend {{.Name}}_http if { hdr(Host) -i {{.FQDN}} {{ range .Aliases -}}{{ . }} {{ end }} }
+    {{- end -}}
+{{- end }}
+
+        default_backend no_backend
+
+
 {{ range .host.AllLxcs }}
+    {{- if or .HttpForward .HttpsTerminate }}
 backend {{.Name}}_http
         server {{.Name}} {{.PrivateIPv4}}:{{.HttpPort}}
+    {{- end }}
 {{ end }}
 
 {{ range .host.AllLxcs }}
+    {{- if .HttpsForward }}
 backend {{.Name}}_https
         mode tcp
         server {{.Name}} {{.PrivateIPv4}}:{{.HttpsPort}}
+    {{- end }}
 {{ end }}
 
 {{ $host := .host -}}
@@ -125,6 +125,9 @@ backend {{.Name}}_https
     {{- range .TCPForwards }}
 listen forward_{{$host.Name}}:{{.HostPort}}_{{$lxc.Name}}:{{.HostPort}}
         mode tcp
+        option tcplog
+        option logasap
+
         timeout client 3600s
         timeout server 3600s
         bind 0.0.0.0:{{.HostPort}}
@@ -132,11 +135,15 @@ listen forward_{{$host.Name}}:{{.HostPort}}_{{$lxc.Name}}:{{.HostPort}}
     {{ end -}}
 {{- end }}
 
-backend certbot
-        server localhost 127.0.0.1:9980
+backend certbot_backend
+        server certbot_server 127.0.0.1:9980
 
 backend redirect_https
         redirect scheme https
+
+backend loop_https_terminate
+        mode tcp
+        server https_terminate_backend 127.0.0.1:443
 
 backend no_backend
         errorfile 503 /etc/haproxy/errors/no-backend.http

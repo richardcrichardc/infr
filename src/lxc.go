@@ -20,6 +20,7 @@ type httpsAction int
 const (
 	HTTPSNONE = iota
 	HTTPSFORWARD
+	HTTPSTERMINATE
 )
 
 type tcpForward struct {
@@ -215,8 +216,10 @@ func httpsActionString(a httpsAction) string {
 		return "NONE"
 	case HTTPSFORWARD:
 		return "FORWARD"
+	case HTTPSTERMINATE:
+		return "TERMINATE"
 	default:
-		panic("Unknown httpAction")
+		panic("Unknown httpsAction")
 	}
 }
 
@@ -268,7 +271,7 @@ func lxcHttpCmd(l *lxc, args []string) {
 
 func lxcHttpsCmd(l *lxc, args []string) {
 	if len(args) != 1 {
-		errorExit("Wrong number of arguments for 'lxc <name> https NONE|TERMINATE'.")
+		errorExit("Wrong number of arguments for 'lxc <name> https NONE|FORWARD|TERMINATE'.")
 	}
 
 	option := strings.ToUpper(args[0])
@@ -278,8 +281,10 @@ func lxcHttpsCmd(l *lxc, args []string) {
 		l.Https = HTTPSNONE
 	case "FORWARD":
 		l.Https = HTTPSFORWARD
+	case "TERMINATE":
+		l.Https = HTTPSTERMINATE
 	default:
-		errorExit("Invalid option, please specify: NONE or FORWARD")
+		errorExit("Invalid option, please specify: NONE, FORWARD or TERMINATE")
 	}
 
 	saveConfig()
@@ -513,7 +518,21 @@ func (l *lxc) HttpsBackend() string {
 		return ""
 	case HTTPSFORWARD:
 		return l.Name + "_https"
+	case HTTPSTERMINATE:
+		return "loop_https_terminate"
 	default:
 		panic("Unexpected httpsAction")
 	}
+}
+
+func (l *lxc) HttpForward() bool {
+	return l.Http == HTTPFORWARD
+}
+
+func (l *lxc) HttpsForward() bool {
+	return l.Https == HTTPSFORWARD
+}
+
+func (l *lxc) HttpsTerminate() bool {
+	return l.Https == HTTPSTERMINATE
 }

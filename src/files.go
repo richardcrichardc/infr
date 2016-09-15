@@ -301,6 +301,8 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
+service haproxy reload
+
 issue-ssl-certs {{.AdminEmail}}
 install-ssl-certs
 
@@ -517,7 +519,7 @@ auto zt0
 allow-hotplug zt0
 iface zt0 inet manual
     up brctl addif br0 zt0
-    down brctl delif br0 ` + "`" + `zt0
+    down brctl delif br0 zt0
 `,
 
     "issue-ssl-certs": `#!/bin/bash

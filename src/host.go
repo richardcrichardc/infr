@@ -83,7 +83,7 @@ func (h *host) InstallSoftware() {
 func (h *host) Configure() {
 	h.Upload(allKnownHostLines(), "/etc/ssh/ssh_known_hosts")
 	h.Upload(h.HAProxyCfg(), "/etc/haproxy/haproxy.cfg")
-	h.Upload(h.HAProxyHttpsDomains(), "/etc/haproxy/https-domains")
+	h.Upload(strings.Join(h.HttpsTerminateDomains(), "\n")+"\n", "/etc/haproxy/https-domains")
 
 	conf := map[string]string{
 		"ZerotierNetworkId": generalConfig("vnetZerotierNetworkId"),
