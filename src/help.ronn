@@ -7,6 +7,7 @@ infr - manage virtual hosting infrastructure
 `infr` [_options_] `hosts add` [`-p` <root-password>] <name> <target-IP-address> <br>
 `infr` [_options_] `host` <name> `reconfigure` [`-n`] [`-s`] [`-k`] [`-R`] <br>
 `infr` [_options_] `host` <name> `remove` <br>
+`infr` [_options_] `host` <name> `backups` <br>
 
 `infr` [_options_] `lxcs` <host> [`list`] <br>
 `infr` [_options_] `lxcs` <host> `add` <name> <distribution> <release> <host> <br>
@@ -18,6 +19,7 @@ infr - manage virtual hosting infrastructure
 `infr` [_options_] `lxc` <name> `http-port` <port> <br>
 `infr` [_options_] `lxc` <name> `https-port` <port> <br>
 `infr` [_options_] `lxc` <name> `remove` <br>
+`infr` [_options_] `lxc` <name> `backups` <br>
 
 `infr` [_options_] `backups` [`list`] <br>
 `infr` [_options_] `backups start` <from-host> <to-host> <br>

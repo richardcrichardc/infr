@@ -35,6 +35,8 @@ func hostCmd(args []string) {
 		hostsReconfigureCmd(h, parseFlags(args, hostsReconfigureFlags))
 	case "remove":
 		hostsRemoveCmd(h, parseFlags(args, noFlags))
+	case "backups":
+		hostsBackupsCmd(h, parseFlags(args, noFlags))
 	default:
 		errorExit("Invalid command: %s", args[0])
 	}
@@ -127,6 +129,19 @@ func hostsAddCmd(args []string) {
 	newHost.ConfigureNetwork()
 	newHost.Configure()
 	dnsFix()
+}
+
+func hostsBackupsCmd(h *host, args []string) {
+	if len(args) != 0 {
+		errorExit("Too many arguments for 'host <name> backups'.")
+	}
+
+	for _, aHost := range config.Hosts {
+		fmt.Printf("%s:\n", aHost.Name)
+
+		l := aHost.SudoCaptureStdout("ls /var/lib/backups/backups/" + h.Name + " || true")
+		fmt.Println(l)
+	}
 }
 
 func hostsRemoveCmd(toRemove *host, args []string) {

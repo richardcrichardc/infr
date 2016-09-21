@@ -2,8 +2,8 @@ package evilbootstrap
 
 const ipxeTemplate = `#!ipxe
 dhcp
-kernel http://http.us.debian.org/debian/dists/jessie/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux
-initrd http://http.us.debian.org/debian/dists/jessie/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz
+kernel http://httpredir.debian.org/debian/dists/jessie/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux
+initrd http://httpredir.debian.org/debian/dists/jessie/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz
 initrd %s preseed.cfg
 boot
 `
