@@ -36,11 +36,26 @@ for HOST in ` + "`" + `compgen -G '*'` + "`" + `; do
 done
 `,
 
+    "backup-cull-snaps": `#!/bin/bash -ex
+
+
+cd snapshots-for/$1
+
+# Remove all but last set of backups
+for DIR in ` + "`" + `ls -r | tail -n+2` + "`" + `; do
+    if [ -n "` + "`" + `ls $DIR` + "`" + `" ]; then
+        chronic sudo btrfs subvolume delete $DIR/*
+    fi
+    rmdir $DIR
+done
+
+`,
+
     "backup-host": `#!/bin/bash -ex
 # Perform a backup of remote host by:
 #  * sshing in,
-#  * taking a btrfs snapshot
-#  * pipeing snapshot back using btrfs send
+#  * taking a btrfs snapshot (for host and each LXC)
+#  * pipeing snapshots back using btrfs send
 #  * saving snapshot locally using btrfs receive
 #  * removing earlier snapshots
 #
@@ -71,33 +86,50 @@ cd $DIR
 		exit 1
 	fi
 
-	LAST=$(ls | tail -n 1)
-
-	# create a new remote snapshot
-	ssh backup_user@$FQDN -C "cd snapshots-for; mkdir -p $TO; cd $TO; sudo btrfs subvolume snapshot -r / $TIMESTAMP"
-
-	# handle errors ourselves
-	set +e
-
-	# copy the snapshot to this host
-	ssh -C backup_user@$FQDN "cd snapshots-for/$TO; sudo backup-send $TIMESTAMP $LAST" | sudo btrfs receive .
-
-	RESULT=$?
-
-	# Exit on error
-	set -e
-
-	# btrfs receive does not clean up after itself when an error occurs
-	if [ ! $RESULT -eq 0 ]; then
-	    sudo btrfs subvolume delete $TIMESTAMP
-	    exit
+	# clean up any mess left over from last time
+	if [ -e incoming ]; then
+		if [ -n "` + "`" + `ls incoming` + "`" + `" ]; then
+			sudo btrfs subvolume delete incoming/*
+		fi
+		rmdir incoming
 	fi
 
-	# delete all but the last remote snapshot
-	ssh backup_user@$FQDN -C "cd snapshots-for/$TO; ls -r | tail -n+2 | xargs -r chronic sudo btrfs subvolume delete"
+	LAST=$(ls | tail -n 1)
+
+	mkdir incoming
+	cd incoming
+
+	# create then send new remote snapshots
+	for SNAP in ` + "`" + `ssh backup_user@$FQDN -C "cd snapshots-for; backup-snap $TO/$TIMESTAMP"` + "`" + `; do
+		echo snap $SNAP
+
+		# did we get a successful snapshot for SNAP from last backup
+		LAST_SNAP=$LAST/$SNAP
+		echo last $LAST_SNAP
+		if [ ! -e "../$LAST_SNAP" ]; then
+			LAST_SNAP=""
+		fi
+
+		# copy the snapshot to this host
+		ssh -C backup_user@$FQDN "cd snapshots-for/$TO; sudo backup-send $TIMESTAMP/$SNAP $LAST_SNAP" | sudo btrfs receive .
+	done
+
+	# if we get this far, we have successfully transfered all backups, do atomic mv to 'commit' incoming backup
+	cd ..
+	mv incoming $TIMESTAMP
+
+	# delete all but the last set of remote snapshots
+	ssh backup_user@$FQDN -C "backup-cull-snaps $TO"
 
 	# delete old backups
-	ls | backups-to-cull| xargs -r chronic sudo btrfs subvolume delete
+	for DIR in ` + "`" + `ls | backups-to-cull` + "`" + `; do
+		if [ -n "` + "`" + `ls $DIR` + "`" + `" ]; then
+			chronic sudo btrfs subvolume delete $DIR/*
+		fi
+		rmdir $DIR
+	done
+
+
 
 ) 9>.lockfile
 `,
@@ -115,6 +147,23 @@ if [ ! -e "$PREV" ]; then
 else
 	btrfs send -p $PREV $SNAPSHOT | cat
 fi`,
+
+    "backup-snap": `#!/bin/bash -e
+
+mkdir -p $1
+cd $1
+
+# snapshot host
+sudo btrfs subvolume snapshot -r / host > /dev/null
+
+# snapshot root filesystem of each LXC
+for LXC in ` + "`" + `sudo lxc-ls` + "`" + `; do
+    sudo btrfs subvolume snapshot -r /var/lib/lxc/$LXC/rootfs lxc-$LXC > /dev/null
+done
+
+# send a list of snapshots, so the backup server knows what snapshots to pull
+ls
+`,
 
     "backups-to-cull": `#!/usr/bin/python3
 

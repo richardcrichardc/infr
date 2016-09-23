@@ -1,0 +1,13 @@
+#!/bin/bash -ex
+
+
+cd snapshots-for/$1
+
+# Remove all but last set of backups
+for DIR in `ls -r | tail -n+2`; do
+    if [ -n "`ls $DIR`" ]; then
+        chronic sudo btrfs subvolume delete $DIR/*
+    fi
+    rmdir $DIR
+done
+

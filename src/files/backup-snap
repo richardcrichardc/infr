@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+mkdir -p $1
+cd $1
+
+# snapshot host
+sudo btrfs subvolume snapshot -r / host > /dev/null
+
+# snapshot root filesystem of each LXC
+for LXC in `sudo lxc-ls`; do
+    sudo btrfs subvolume snapshot -r /var/lib/lxc/$LXC/rootfs lxc-$LXC > /dev/null
+done
+
+# send a list of snapshots, so the backup server knows what snapshots to pull
+ls

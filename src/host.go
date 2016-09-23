@@ -65,7 +65,9 @@ func (h *host) InstallSoftware() {
 	h.UploadX(files("install-ssl-certs"), "/usr/local/bin/install-ssl-certs")
 	h.UploadX(files("backup-host"), "/usr/local/bin/backup-host")
 	h.UploadX(files("backup-all"), "/usr/local/bin/backup-all")
+	h.UploadX(files("backup-snap"), "/usr/local/bin/backup-snap")
 	h.UploadX(files("backup-send"), "/usr/local/bin/backup-send")
+	h.UploadX(files("backup-cull-snaps"), "/usr/local/bin/backup-cull-snaps")
 	h.UploadX(files("backups-to-cull"), "/usr/local/bin/backups-to-cull")
 	h.Upload(files("infr-backup"), "/etc/cron.d/infr-backup")
 
