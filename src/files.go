@@ -350,7 +350,7 @@ then
 	zerotier-cli join {{.ZerotierNetworkId}}
 fi
 
-# reload haproxy before getting new certificates so .well-knwon/acme-challenge is enabled for the new domain
+# reload haproxy before getting new certificates so .well-known/acme-challenge is enabled for the new domain
 service haproxy reload
 issue-ssl-certs {{.AdminEmail}}
 install-ssl-certs
@@ -523,6 +523,10 @@ chown backup_user:nogroup /var/lib/backups /var/lib/backups/backups /var/lib/bac
 if [ ! -e "/var/lib/backups/.ssh/id_rsa" ]; then
 	sudo -u backup_user ssh-keygen -q -N '' -f /var/lib/backups/.ssh/id_rsa
 fi
+
+# setup minimal SSL configuration to avoid chicken and egg problem between haproxy and letencrypt
+cat /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key > /etc/haproxy/ssl/default.crt
+touch /etc/haproxy/ssl-crt-list
 `,
 
     "install-ssl-certs": `#!/bin/bash
