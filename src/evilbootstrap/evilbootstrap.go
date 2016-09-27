@@ -5,7 +5,6 @@ import (
 	"infr/easyssh"
 	"infr/util"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -73,7 +72,6 @@ func Install(currentAddress, currentRootPass, hostname, domainname, managerAuthK
 }
 
 func genPxeScript(managerAuthKeys, lastPreseedURL string) (script, preseedURL string, err error) {
-	newGist := true
 	keyList := strings.Split(managerAuthKeys, "\n")
 	for i := range keyList {
 		keyList[i] = fmt.Sprintf("echo '%s'", keyList[i])
@@ -82,35 +80,15 @@ func genPxeScript(managerAuthKeys, lastPreseedURL string) (script, preseedURL st
 
 	preseedCfg := fmt.Sprintf(preseedTemplate, escapedManagerAuthKeyEchos)
 
-	if lastPreseedURL != "" {
-		msg("Checking preseed.cfg at %s ...", lastPreseedURL)
 
-		resp, err := http.Get(lastPreseedURL)
+	msg("Uploaded Debian installer preseed.cfg to pastebin...")
 
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == 200 {
-				lastPreseedBytes, _ := ioutil.ReadAll(resp.Body)
-				if string(lastPreseedBytes) == preseedCfg {
-					msg("Reusing Debian installer preseed.cfg Gist at: %s", lastPreseedURL)
-					newGist = false
-					preseedURL = lastPreseedURL
-				}
-			}
-		}
-
+	preseedURL, err = Paste(preseedCfg)
+	if err != nil {
+		return "", "", err
 	}
-
-	if newGist {
-		msg("Uploaded Debian installer preseed.cfg as new Gist...")
-
-		preseedURL, err = CreateAnonymousGist(preseedCfg)
-		if err != nil {
-			return "", "", err
-		}
-		msg("Gist URL: %s", preseedURL)
-		msgLF()
-	}
+	msg("Preseed URL: %s", preseedURL)
+	msgLF()
 
 	return fmt.Sprintf(ipxeTemplate, preseedURL), preseedURL, nil
 }
