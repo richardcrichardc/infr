@@ -1,6 +1,6 @@
 #!/bin/bash
 # A wrapper around btrfs send
-# Performs an incremental send if both from-snapshot and to-snapshot are presend
+# Performs an incremental send if both from-snapshot and to-snapshot are present
 # otherwise perform a full send of to-snapshot
 
 SNAPSHOT=$1

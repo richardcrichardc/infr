@@ -479,6 +479,7 @@ EOG
 	chmod u=rwx /home/manager/.ssh
 	echo "{{.SSHKeys}}" > /home/manager/.ssh/authorized_keys
 	chmod u=rw /home/manager/.ssh/authorized_keys
+	chown -R manager:manager /home/manager/.ssh
 
 	adduser manager sudo
 	# allow sudo without password (manager has not got one)
