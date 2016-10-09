@@ -1,16 +1,21 @@
 # INFR
 
+INFR is currently in BETA. We are using it for hosting production systems at [Tawhero Technology](https://tawherotech.nz/), however documentation and some features core are incomplete. If you want to give it a go, we suggest you use it on VPSs from [Vultr](https://www.vultr.com/). 
+
 ## Introduction
 
-To be done
+INFR is a command line tool for managing a cluster of [LXC's](https://linuxcontainers.org/) on a fleet of VPS's provided by organisations such as Linode, Digital Ocean or Vultr. It is for all those little systems, that need to be independent but don't justify having a full VPS. 
 
 ## Getting Started
 
 ### Installation
 
+<!--
 #### Binary Download
 
  * [Latest x86-64 Linux binary](https://tawherotech.nz/infr/infr)
+
+-->
 
 #### Building from source
 
