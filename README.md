@@ -1,6 +1,6 @@
 # INFR
 
-INFR is currently in BETA. We are using it for hosting production systems at [Tawhero Technology](https://tawherotech.nz/), however documentation and some features core are incomplete. If you want to give it a go, we suggest you use it on VPSs from [Vultr](https://www.vultr.com/). 
+INFR is currently in BETA. We are using it for hosting production systems at [Tawhero Technology](https://tawherotech.nz/), however documentation and some core features are incomplete. If you want to give it a go, we suggest you use it on VPSs from [Vultr](https://www.vultr.com/). 
 
 ## Introduction
 
