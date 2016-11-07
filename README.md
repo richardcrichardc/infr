@@ -6,6 +6,8 @@ INFR is currently in BETA. We are using it for hosting production systems at [Ta
 
 INFR is a command line tool for managing a cluster of [LXC's](https://linuxcontainers.org/) on a fleet of VPS's provided by organisations such as Linode, Digital Ocean or Vultr. It is for all those little systems, that need to be independent but don't justify having a full VPS. 
 
+[More into TDB]
+
 ## Getting Started
 
 ### Installation
